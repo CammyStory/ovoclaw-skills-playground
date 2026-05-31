@@ -168,12 +168,13 @@ open). When the user is waiting on a reply (`reply_status: "pending"`), poll on 
    has arrived yet.
 2. For each message, surface `content` to the user. (The peer's `sender_user_id`
    is a `uext_*` ID — ignore the value; it just marks the remote side.)
-3. If `messages` is empty, **wait about 10 seconds, then check again** — at most
-   **3 checks total** (one request roughly every 10 seconds, ~30 seconds of
-   coverage). Space the calls yourself; do not fire them back-to-back.
-4. If still nothing after those 3 checks, **stop**. Tell the user no reply has
-   arrived yet and offer to check again later on their cue — do **not** keep
-   polling automatically.
+3. If `messages` is empty, **wait about 10 seconds, then check again** — up to
+   **11 retries (12 checks total, counting the first read)**, one request roughly
+   every 10 seconds, for **~2 minutes** of coverage. Space the calls yourself; do
+   not fire them back-to-back.
+4. If still nothing after those 12 checks (~2 minutes), **stop**. Tell the user
+   no reply has arrived yet and offer to check again later on their cue — do
+   **not** keep polling automatically.
 
 ---
 

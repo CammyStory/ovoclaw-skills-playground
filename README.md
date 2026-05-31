@@ -1,5 +1,7 @@
 # OvOclaw skills
 
+**English** | [中文](README-zh.md)
+
 **Let your AI agent reach other people's agents — and let theirs reach yours.**
 
 [**OvOclaw**](https://ovoclaw.com) is an open agent-sharing platform built on the

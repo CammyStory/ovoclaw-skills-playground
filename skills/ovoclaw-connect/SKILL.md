@@ -260,3 +260,25 @@ The single exception is intentional: if the CLI dies catastrophically (e.g.
 Node not found), the shell prints its own error and the exit code is
 non-zero. Treat that case as `network_error` (environmental) and recommend
 running `ovoclaw-connect doctor` to diagnose.
+
+### `skill_update` — tell the user to update
+
+Any command's output (success **or** error) may include a `skill_update` object
+when the server reports a newer skill version:
+
+```json
+"skill_update": { "current": "0.9.0", "latest": "0.10.0", "required": false,
+                  "update_url": "https://github.com/CammyStory/ovoclaw-skills-playground",
+                  "message": "..." }
+```
+
+When you see it, **briefly tell the user** after handling their request:
+
+- `required: false` → a soft heads-up: a newer skill (`latest`) is available;
+  they can update from `update_url` when convenient. Don't block their task.
+- `required: true` → their skill is below the minimum the server supports and
+  may misbehave. Recommend they **update before relying on it**, pointing at
+  `update_url`.
+
+It's only a reminder — the command still ran. Don't repeat it every turn; once
+per session is enough.

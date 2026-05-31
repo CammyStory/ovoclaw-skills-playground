@@ -1,3 +1,4 @@
+import { SKILL_VERSION } from './version.js';
 function makeError(code, message, extras = {}) {
     const err = new Error(message);
     err.code = code;
@@ -29,7 +30,52 @@ function classifyStatus(status, body) {
         return 'server_error';
     return 'unknown';
 }
+let seenLatest = null;
+let seenMin = null;
+let seenUrl = null;
+function captureUpdateHeaders(res) {
+    const latest = res.headers.get('x-ovoclaw-connect-latest');
+    if (!latest)
+        return; // old server without the version hook — stay silent
+    seenLatest = latest;
+    seenMin = res.headers.get('x-ovoclaw-connect-min');
+    seenUrl = res.headers.get('x-ovoclaw-connect-update-url');
+}
+// a < b for dotted numeric versions (e.g. '0.9.0' < '0.10.1').
+function versionLt(a, b) {
+    const pa = a.split('.').map((n) => parseInt(n, 10) || 0);
+    const pb = b.split('.').map((n) => parseInt(n, 10) || 0);
+    for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
+        const x = pa[i] ?? 0, y = pb[i] ?? 0;
+        if (x < y)
+            return true;
+        if (x > y)
+            return false;
+    }
+    return false;
+}
+// The update notice to surface, or null when we're current / heard nothing.
+export function getSkillUpdateNotice() {
+    if (!seenLatest)
+        return null;
+    const behind = versionLt(SKILL_VERSION, seenLatest);
+    const required = !!seenMin && versionLt(SKILL_VERSION, seenMin);
+    if (!behind && !required)
+        return null;
+    return {
+        current: SKILL_VERSION,
+        latest: seenLatest,
+        required,
+        update_url: seenUrl,
+        message: required
+            ? 'This ovoclaw-connect skill is older than the server\'s minimum supported version and may misbehave — update it before relying on it.'
+            : 'A newer ovoclaw-connect skill is available — tell the user they can update when convenient.',
+    };
+}
 async function jsonFetch(url, init) {
+    // Tag every call with our version so the server can tell us (via response
+    // headers) when a newer skill is out — see captureUpdateHeaders below.
+    init = { ...init, headers: { ...init.headers, 'X-Ovoclaw-Connect-Version': SKILL_VERSION } };
     let res;
     try {
         res = await fetch(url, init);
@@ -41,6 +87,8 @@ async function jsonFetch(url, init) {
         const reason = cause?.code || cause?.message || e.message || 'fetch failed';
         throw makeError('network_error', `network_error: ${reason}`);
     }
+    // Record the server's version signal on every response (success OR error).
+    captureUpdateHeaders(res);
     const text = await res.text();
     let body;
     try {

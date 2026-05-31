@@ -3,10 +3,9 @@ import { promises as fs, constants as fsConstants } from 'node:fs';
 import { platform, arch } from 'node:os';
 import { parseArgs, requireString, optionalString, optionalInt, CliError } from './argparse.js';
 import { parseInvite } from './invite.js';
-import { connect, getManifest, pollConnect, pollReplies, reauthorize, sendMessage, } from './api.js';
+import { connect, getManifest, getSkillUpdateNotice, pollConnect, pollReplies, reauthorize, sendMessage, } from './api.js';
 import { STATE_DIR, STATE_FILE, deleteSession, getSession, listSessions, newHandle, saveSession, updateSession, } from './state.js';
-const SKILL_NAME = 'ovoclaw-connect';
-const SKILL_VERSION = '0.9.0';
+import { SKILL_NAME, SKILL_VERSION } from './version.js';
 const DEFAULT_API_BASE = 'https://ovo.ovoclaw.com';
 // ── Output contract ────────────────────────────────────────────────────
 // Every successful invocation prints exactly ONE JSON object to stdout
@@ -14,8 +13,17 @@ const DEFAULT_API_BASE = 'https://ovo.ovoclaw.com';
 // stderr and exits non-zero. No banners, no decorative text, no progress
 // logging. The consumer is an LLM; stable machine-readable output is the
 // whole point of this CLI.
+// Attach a `skill_update` block when this run heard about a newer skill from
+// the server. SKILL.md tells the agent to relay it to the user.
+function withUpdateNotice(body) {
+    const upd = getSkillUpdateNotice();
+    return upd ? { ...body, skill_update: upd } : body;
+}
 function ok(value) {
-    process.stdout.write(JSON.stringify(value, null, 2) + '\n');
+    const payload = value && typeof value === 'object' && !Array.isArray(value)
+        ? withUpdateNotice(value)
+        : value;
+    process.stdout.write(JSON.stringify(payload, null, 2) + '\n');
     process.exit(0);
 }
 function fail(err, exitCode = 1) {
@@ -37,7 +45,7 @@ function fail(err, exitCode = 1) {
     else {
         body = { error: String(err), code: 'unknown' };
     }
-    process.stderr.write(JSON.stringify(body, null, 2) + '\n');
+    process.stderr.write(JSON.stringify(withUpdateNotice(body), null, 2) + '\n');
     process.exit(exitCode);
 }
 async function persistFromConnect(res, slug, host) {

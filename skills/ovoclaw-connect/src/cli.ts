@@ -6,12 +6,14 @@ import { parseInvite } from './invite.js'
 import {
   connect,
   getManifest,
+  getSkillUpdateNotice,
   pollConnect,
   pollReplies,
   reauthorize,
   sendMessage,
   type ConnectResponse,
   type ApiError,
+  type SkillUpdateNotice,
 } from './api.js'
 import {
   STATE_DIR,
@@ -24,9 +26,8 @@ import {
   updateSession,
   type Session,
 } from './state.js'
+import { SKILL_NAME, SKILL_VERSION } from './version.js'
 
-const SKILL_NAME = 'ovoclaw-connect'
-const SKILL_VERSION = '0.9.0'
 const DEFAULT_API_BASE = 'https://ovo.ovoclaw.com'
 
 // ── Output contract ────────────────────────────────────────────────────
@@ -36,8 +37,19 @@ const DEFAULT_API_BASE = 'https://ovo.ovoclaw.com'
 // logging. The consumer is an LLM; stable machine-readable output is the
 // whole point of this CLI.
 
+// Attach a `skill_update` block when this run heard about a newer skill from
+// the server. SKILL.md tells the agent to relay it to the user.
+function withUpdateNotice<T extends object>(body: T): T & { skill_update?: SkillUpdateNotice } {
+  const upd = getSkillUpdateNotice()
+  return upd ? { ...body, skill_update: upd } : body
+}
+
 function ok(value: unknown): never {
-  process.stdout.write(JSON.stringify(value, null, 2) + '\n')
+  const payload =
+    value && typeof value === 'object' && !Array.isArray(value)
+      ? withUpdateNotice(value as object)
+      : value
+  process.stdout.write(JSON.stringify(payload, null, 2) + '\n')
   process.exit(0)
 }
 
@@ -56,7 +68,7 @@ function fail(err: unknown, exitCode = 1): never {
   } else {
     body = { error: String(err), code: 'unknown' }
   }
-  process.stderr.write(JSON.stringify(body, null, 2) + '\n')
+  process.stderr.write(JSON.stringify(withUpdateNotice(body), null, 2) + '\n')
   process.exit(exitCode)
 }
 

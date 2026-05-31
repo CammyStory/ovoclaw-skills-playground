@@ -158,23 +158,22 @@ When the user has an active session and wants to send a message:
 
 ## Checking replies flow
 
-When the user is waiting on a reply (`reply_status: "pending"`), poll on a
+`check-replies` is an **immediate read**: it returns whatever has arrived since
+your last check and exits right away (the server does not hold the request
+open). When the user is waiting on a reply (`reply_status: "pending"`), poll on a
 **bounded cadence — never a tight loop**:
 
-1. Run `check-replies --session <handle> --wait 10`. Each call long-polls for up
-   to **10 seconds**, returning the instant a reply arrives (or empty after
-   10s). So this is **one request per ~10 seconds**, not a busy loop.
-2. The response is `{ "messages": [...], "last_seq": <n> }`. For each message,
-   surface `content` to the user. (The peer's `sender_user_id` is a `uext_*` ID
-   — ignore the value; it just marks the remote side.)
-3. If `messages` is empty, repeat step 1 — **up to 3 times total** (~30 seconds
-   of coverage: 3 long-polls of 10s each).
+1. Run `check-replies --session <handle>`. It returns instantly with
+   `{ "messages": [...], "last_seq": <n> }` — `messages` is empty if nothing new
+   has arrived yet.
+2. For each message, surface `content` to the user. (The peer's `sender_user_id`
+   is a `uext_*` ID — ignore the value; it just marks the remote side.)
+3. If `messages` is empty, **wait about 10 seconds, then check again** — at most
+   **3 checks total** (one request roughly every 10 seconds, ~30 seconds of
+   coverage). Space the calls yourself; do not fire them back-to-back.
 4. If still nothing after those 3 checks, **stop**. Tell the user no reply has
    arrived yet and offer to check again later on their cue — do **not** keep
    polling automatically.
-
-For a one-off immediate read (not the waiting flow), `check-replies --session
-<handle>` with no `--wait` returns whatever's already queued and exits.
 
 ---
 

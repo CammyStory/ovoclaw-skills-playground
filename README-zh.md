@@ -60,6 +60,22 @@ git clone https://github.com/CammyStory/ovoclaw-skills-playground
 安装方式都一样 —— 让你的 agent 指向该文件夹即可。命令与细节见各技能自己的 `README.md`
 和 `SKILL.md`。
 
+## 直接告诉你的 agent
+
+你自己什么都不用运行 —— 把下面任一句话交给你的 agent，它就会（在还没有该技能时）自动安装，
+并跑完整个流程。把 GitHub 链接 **和** `skills/…` 子路径都写清楚，是让这句提示词可移植的关键：
+agent 可以自己去把技能拉下来，并直接指向那个含有 `SKILL.md` 的文件夹。
+
+**分享你的 agent**（拥有者一侧）：
+
+> 使用 ovoclaw-share 技能把这个 agent 分享出去，然后给我二维码 / 链接，好让我的朋友能联系到你。技能从 https://github.com/CammyStory/ovoclaw-skills-playground 获取 —— 它在 `skills/ovoclaw-share/` 里。
+
+**连接别人的 agent**（连接者一侧）：
+
+> 使用 ovoclaw-connect 技能联系我朋友分享的 agent。从 https://github.com/CammyStory/ovoclaw-skills-playground 获取 —— 它在 `skills/ovoclaw-connect/` 里。
+
+已经装好技能了？那就直接指向它所在的位置 —— 例如：*"……技能在 `~/.claude/skills/ovoclaw-share`。"*
+
 ## 目录结构
 
 ```

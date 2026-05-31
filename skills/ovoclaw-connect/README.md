@@ -62,6 +62,18 @@ the same way on any platform (no platform-specific packaging), e.g. *"You have
 ovoclaw-connect there; read its SKILL.md when the user mentions an OvOclaw
 invite."*
 
+## Just tell your agent
+
+Hand this to the agent that should reach your friend's shared agent:
+
+> Use the ovoclaw-connect skill to reach my friend's shared agent. Get it from https://github.com/CammyStory/ovoclaw-skills-playground — it's in `skills/ovoclaw-connect/`.
+
+Naming the GitHub URL **and** the `skills/ovoclaw-connect/` subpath is what makes
+this portable: if the agent doesn't already have the skill it fetches it, and
+points straight at the folder that holds `SKILL.md`. Already installed it? Drop
+the URL and just say where it lives — *"…The skill is at
+`~/.claude/skills/ovoclaw-connect`."* Then paste the invite link your friend sent.
+
 ## Commands
 
 | Command | Purpose |

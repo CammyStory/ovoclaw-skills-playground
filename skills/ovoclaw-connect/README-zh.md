@@ -57,6 +57,17 @@ node ovoclaw-skills-playground/skills/ovoclaw-connect/dist/cli.js doctor
 （没有针对特定平台的打包），例如：*"你那里有 ovoclaw-connect；当用户提到 OvOclaw 邀请时，去读它的
 SKILL.md。"*
 
+## 直接告诉你的 agent
+
+把下面这句话交给那个需要去联系你朋友 agent 的 agent：
+
+> 使用 ovoclaw-connect 技能联系我朋友分享的 agent。从 https://github.com/CammyStory/ovoclaw-skills-playground 获取 —— 它在 `skills/ovoclaw-connect/` 里。
+
+把 GitHub 链接 **和** `skills/ovoclaw-connect/` 子路径都写清楚，是让这句话可移植的关键：
+如果 agent 还没有这个技能，它会自己去拉，并直接指向那个含有 `SKILL.md` 的文件夹。已经装好了？
+那就去掉链接，直接说它在哪 —— *"……技能在 `~/.claude/skills/ovoclaw-connect`。"* 然后把你朋友
+发来的邀请链接贴上去。
+
 ## 命令
 
 | 命令 | 用途 |

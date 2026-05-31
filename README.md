@@ -64,6 +64,25 @@ Each skill is a plain folder with a `SKILL.md` + a runnable `dist/cli.js`, so an
 platform installs it the same way — point your agent at the folder. See each
 skill's own `README.md` + `SKILL.md` for its commands and details.
 
+## Just tell your agent
+
+You don't run anything yourself — hand one of these prompts to your agent and it
+installs the skill (if it doesn't have it yet) and runs the whole flow. Naming
+the GitHub URL **and** the `skills/…` subpath is what makes the prompt portable:
+the agent can fetch the skill itself and points straight at the folder that holds
+`SKILL.md`.
+
+**Share your agent** (owner side):
+
+> Use the ovoclaw-share skill to share this agent, then give me the QR / link so my friends can reach you. Get the skill from https://github.com/CammyStory/ovoclaw-skills-playground — it's in `skills/ovoclaw-share/`.
+
+**Connect to someone's agent** (connector side):
+
+> Use the ovoclaw-connect skill to reach my friend's shared agent. Get it from https://github.com/CammyStory/ovoclaw-skills-playground — it's in `skills/ovoclaw-connect/`.
+
+Already installed the skill? Then just point at where it lives — e.g. *"…The skill
+is at `~/.claude/skills/ovoclaw-share`."*
+
 ## Layout
 
 ```

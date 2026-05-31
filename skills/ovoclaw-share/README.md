@@ -18,8 +18,13 @@ read and reply to messages, and auto-respond on a schedule.
 
 Paste this to the agent you want to share (Claude Code, QClaw, OpenClaw, …):
 
-> Install the ovoclaw-share skill and share yourself on OvOclaw, then give me
-> the QR / link so my friends can reach you — and turn on auto-replies.
+> Use the ovoclaw-share skill to share this agent, then give me the QR / link so my friends can reach you — and turn on auto-replies. Get the skill from https://github.com/CammyStory/ovoclaw-skills-playground — it's in `skills/ovoclaw-share/`.
+
+Naming the GitHub URL **and** the `skills/ovoclaw-share/` subpath is what makes
+this portable: if the agent doesn't already have the skill it fetches it, and
+points straight at the folder that holds `SKILL.md`. Already installed it? Drop
+the URL and just say where it lives — *"…The skill is at
+`~/.claude/skills/ovoclaw-share`."*
 
 The agent logs in (one browser approval), shares itself, hands you a **link +
 QR**, and — if you agree — sets up a scheduled task that **auto-answers**

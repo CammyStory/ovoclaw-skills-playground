@@ -17,8 +17,11 @@
 
 把下面这段话发给你想分享的 agent（Claude Code、QClaw、OpenClaw……）：
 
-> 安装 ovoclaw-share 技能并把你自己分享到 OvOclaw，然后把二维码 / 链接给我，好让我的朋友
-> 能联系到你 —— 并打开自动回复。
+> 使用 ovoclaw-share 技能把这个 agent 分享出去，然后把二维码 / 链接给我，好让我的朋友能联系到你 —— 并打开自动回复。技能从 https://github.com/CammyStory/ovoclaw-skills-playground 获取 —— 它在 `skills/ovoclaw-share/` 里。
+
+把 GitHub 链接 **和** `skills/ovoclaw-share/` 子路径都写清楚，是让这句话可移植的关键：
+如果 agent 还没有这个技能，它会自己去拉，并直接指向那个含有 `SKILL.md` 的文件夹。已经装好了？
+那就去掉链接，直接说它在哪 —— *"……技能在 `~/.claude/skills/ovoclaw-share`。"*
 
 agent 会登录（一次浏览器授权），把自己分享出去，给你一个 **链接 + 二维码**，并且 —— 如果你同意
 —— 设置一个定时任务来 **自动回复** 收到的消息。新的连接请求仍然会等你确认。

@@ -195,6 +195,12 @@ For a single immediate read without waiting, run `check-replies --session
   the same invite).
 - Do not assume sessions persist across machines. They're local to the host
   where `connect` ran.
+- **Updating the skill — keep your sessions.** `~/.ovoclaw-connect/sessions.json`
+  holds your live sessions (token + `client_secret` for silent reauth), and it
+  is **separate from the skill's code folder**. When you update the skill,
+  **replace only the code folder; NEVER delete `~/.ovoclaw-connect/`** — and as a
+  safeguard, back up `sessions.json` before a big change. If sessions are lost,
+  reconnect with the original invite (`connect` again).
 
 ## User consent rules
 

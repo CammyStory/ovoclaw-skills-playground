@@ -6,6 +6,11 @@ import { join } from 'node:path';
 // connect state can coexist on the same machine without colliding.
 export const STATE_DIR = join(homedir(), '.ovoclaw-share');
 export const AUTH_FILE = join(STATE_DIR, 'auth.json');
+// A mirror of auth.json written on every save. If auth.json is later lost or
+// corrupted (e.g. an interrupted write, or a clumsy skill update), loadAuth
+// transparently restores from this backup — so the user keeps their login
+// instead of having to run `login` again.
+export const AUTH_BACKUP_FILE = join(STATE_DIR, 'auth.json.bak');
 // Which agent this skill last shared. Kept SEPARATE from auth.json so it
 // survives logout / token expiry: on the next `login` we pass this id to the
 // approval page as agent_hint, and it auto-confirms the same agent — so every
@@ -20,36 +25,74 @@ async function ensureDir() {
     }
     catch { }
 }
-export async function loadAuth() {
+// Read + validate an auth file. Returns null for missing (ENOENT) or corrupt /
+// malformed contents; rethrows only unexpected fs errors (e.g. permissions).
+async function readAuthFrom(path) {
+    let raw;
     try {
-        const raw = await fs.readFile(FILE, 'utf8');
-        const parsed = JSON.parse(raw);
-        if (typeof parsed === 'object' && parsed !== null && typeof parsed.accessToken === 'string') {
-            return parsed;
-        }
-        return null;
+        raw = await fs.readFile(path, 'utf8');
     }
     catch (e) {
         if (e.code === 'ENOENT')
             return null;
         throw e;
     }
+    try {
+        const parsed = JSON.parse(raw);
+        if (typeof parsed === 'object' && parsed !== null && typeof parsed.accessToken === 'string') {
+            return parsed;
+        }
+    }
+    catch {
+        // corrupt JSON — fall through to null so the caller can try the backup
+    }
+    return null;
+}
+export async function loadAuth() {
+    const primary = await readAuthFrom(FILE);
+    if (primary)
+        return primary;
+    // Primary missing or corrupt — recover from the backup and restore it so the
+    // user stays logged in without re-running `login`.
+    const backup = await readAuthFrom(AUTH_BACKUP_FILE);
+    if (backup) {
+        try {
+            await saveAuth(backup);
+        }
+        catch { /* restore is best-effort */ }
+        return backup;
+    }
+    return null;
 }
 export async function saveAuth(auth) {
     await ensureDir();
-    await fs.writeFile(FILE, JSON.stringify(auth, null, 2), { mode: 0o600 });
+    const json = JSON.stringify(auth, null, 2);
+    await fs.writeFile(FILE, json, { mode: 0o600 });
     try {
         await fs.chmod(FILE, 0o600);
     }
     catch { }
+    // Mirror to the backup so a lost/corrupt auth.json can self-heal on next load.
+    try {
+        await fs.writeFile(AUTH_BACKUP_FILE, json, { mode: 0o600 });
+        try {
+            await fs.chmod(AUTH_BACKUP_FILE, 0o600);
+        }
+        catch { }
+    }
+    catch { /* backup is best-effort; never fail a login over it */ }
 }
 export async function clearAuth() {
-    try {
-        await fs.unlink(FILE);
-    }
-    catch (e) {
-        if (e.code !== 'ENOENT')
-            throw e;
+    // Remove BOTH files — otherwise loadAuth would restore the login from the
+    // backup and logout wouldn't stick.
+    for (const f of [FILE, AUTH_BACKUP_FILE]) {
+        try {
+            await fs.unlink(f);
+        }
+        catch (e) {
+            if (e.code !== 'ENOENT')
+                throw e;
+        }
     }
 }
 export async function loadBoundAgent() {

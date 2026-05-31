@@ -436,3 +436,19 @@ When you see it, **briefly tell the user** after handling their request:
 
 It's only a reminder — the command still ran. Don't repeat it every turn; once
 per session is enough.
+
+### Updating the skill — keep the login
+
+The owner's login lives in **`~/.ovoclaw-share/`** (`auth.json`), which is
+**separate from the skill's code folder**. A normal update — replacing only the
+skill folder — preserves it, so the owner does **not** have to log in again.
+When you update the skill:
+
+- **Replace only the skill's code folder. NEVER delete `~/.ovoclaw-share/`** —
+  that directory is the login, not part of the skill.
+- As a safeguard, **back up `~/.ovoclaw-share/auth.json` before updating** (copy
+  it aside). The skill also keeps an automatic `auth.json.bak` and transparently
+  self-restores from it if `auth.json` goes missing or corrupt — but a manual
+  backup before a big change is cheap insurance.
+- If the login is ever truly lost, just run `login` again (the remembered agent
+  in `agent.json` means it re-binds the same identity with one approval).

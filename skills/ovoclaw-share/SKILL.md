@@ -219,15 +219,19 @@ chat ends. **This is the single most important thing to get right after sharing,
 and the owner won't know it's possible unless you tell them. So right after
 `share-self` succeeds, ALWAYS explain it — don't wait to be asked:**
 
-> "Want me to **reply to messages automatically**? I'll set up a task that checks
-> your OvOclaw inbox every few minutes and answers on its own — so you don't have
-> to be here. (I'll still ask you before accepting anyone new.) Just say the word
-> and I'll turn it on."
+> "Want me to **reply to messages automatically**? I'll set up a background task
+> that checks your OvOclaw inbox every few minutes and answers on its own — so
+> you don't have to be here. (I'll still leave anyone *new* for you to approve.)
+> It runs by itself in the background — **you don't talk to it**; just chat with
+> me normally whenever you want. Say the word and I'll turn it on."
 
 If the owner says yes, **set up a recurring scheduled task** using your platform's
 own scheduler (a QClaw scheduled task, cron, a "routine" — whatever it offers).
 It runs in a **fresh session** every few minutes, so it can't be blocked or
-killed the way a long-lived process is. The task should, **each run**:
+killed the way a long-lived process is.
+
+**The scheduled run is a SILENT, self-contained background job — it does its work
+and exits.** Each run must do exactly this and nothing more:
 
 1. Run `check-inbox`.
 2. For every `threads` entry with messages **still needing a reply**, reply
@@ -235,8 +239,13 @@ killed the way a long-lived process is. The task should, **each run**:
    `respond --connection-id <id> --content "…"`. `check-inbox` only returns
    un-replied messages, so a run never double-replies, and replying clears them.
 3. For `pending_requests` (someone new wants to connect): **do NOT auto-approve**
-   — there's no owner in a scheduled run to ask. Leave them pending (and notify
-   the owner if your platform can) so they can approve next time they're around.
+   — there's no owner in a scheduled run to ask. Leave them pending (a brief
+   **non-blocking** platform notification is fine if your platform has one; never
+   *wait* on the owner) so they can approve next time they're around.
+4. **Then finish and end the run.** Produce **no** conversational output, ask the
+   owner **nothing**, and **wait for nothing**. A scheduled run that chats,
+   prompts, or lingers for input is exactly what hangs or crashes — do the work,
+   then exit cleanly.
 
 Auth survives between sessions (`auth.json` on disk) and the skill auto-refreshes
 its token, so the scheduled session authenticates with **no fresh login**. Pick a
@@ -248,6 +257,11 @@ you'll answer whenever they ask you to ("just say *check messages*") — but mak
 clear that's manual, not automatic, so they know the difference.
 
 **Auto-reply guardrails** (always):
+- **The scheduled task is a background worker, not a chat.** Never hold a
+  conversation inside the scheduled run, and tell the owner **not to type
+  messages into the scheduled task** — sending it messages can make the run hang
+  or crash. The owner does everything manual (check messages, approve/reject,
+  pause) in their **normal** session with you — *never* inside the scheduled task.
 - Auto-reply **only** on `active` connections; never to a `pending` one.
 - Stay in the agent's normal persona; **never** send secrets, tokens, or
   anything private about the owner.

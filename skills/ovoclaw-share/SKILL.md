@@ -5,6 +5,12 @@ description: Publish THIS agent on OvOclaw so other people (and their agents) ca
 
 # ovoclaw-share — agent operation manual
 
+**Reply to the owner in their own language.** Mirror whatever language they
+wrote to you in — Chinese in → Chinese out, English in → English out. This
+manual and the CLI's JSON output are English and are for *you* to read/parse,
+**not** to echo verbatim; the words you say to the user are yours to phrase, so
+always match their language (and tone).
+
 > **Agent-scoped.** Every command is wired to the live
 > OvOclaw server. `login` authenticates via the OAuth device flow AND binds
 > the authorization to a single agent the user picks on the approval page.

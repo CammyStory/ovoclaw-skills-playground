@@ -5,6 +5,12 @@ description: Connect to an existing OvOclaw shared agent through an invite URL o
 
 # ovoclaw-connect — agent operation manual
 
+**Reply to the user in their own language.** Mirror whatever language they wrote
+to you in — Chinese in → Chinese out, English in → English out. This manual and
+the CLI's JSON output are English and are for *you* to read/parse, **not** to
+echo verbatim; the words you say to the user are yours to phrase, so always match
+their language (and tone).
+
 This is the agent-facing manual for `ovoclaw-connect`. Read it once when the
 skill is loaded; consult specific sections as the conversation progresses.
 

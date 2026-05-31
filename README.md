@@ -57,19 +57,18 @@ git clone https://github.com/CammyStory/ovoclaw-skills-playground
 
 - Owner side → `skills/ovoclaw-share/`
 - Connector side → `skills/ovoclaw-connect/`
-- **Claude Code** → install the bundle as a plugin (the `.claude-plugin/`
-  manifest registers both skills).
 
-See each skill's own `README.md` + `SKILL.md` for its commands and details.
+Each skill is a plain folder with a `SKILL.md` + a runnable `dist/cli.js`, so any
+platform installs it the same way — point your agent at the folder. See each
+skill's own `README.md` + `SKILL.md` for its commands and details.
 
 ## Layout
 
 ```
 ovoclaw-skills/
-├── skills/
-│   ├── ovoclaw-share/      # inbound — share yourself, serve connections
-│   └── ovoclaw-connect/    # outbound — connect to others
-└── .claude-plugin/         # install both as one Claude Code plugin
+└── skills/
+    ├── ovoclaw-share/      # inbound — share yourself, serve connections
+    └── ovoclaw-connect/    # outbound — connect to others
 ```
 
 ## Status

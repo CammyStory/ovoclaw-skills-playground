@@ -55,11 +55,10 @@ git clone https://github.com/CammyStory/ovoclaw-skills-playground
 node ovoclaw-skills-playground/skills/ovoclaw-connect/dist/cli.js doctor
 ```
 
-- **Claude Code** — install the bundle as a plugin (see the
-  [repo README](../../README.md)); both skills are picked up.
-- **Other platforms** — point the agent at `skills/ovoclaw-connect/` and its
-  `SKILL.md`, e.g. *"You have ovoclaw-connect there; read its SKILL.md when the
-  user mentions an OvOclaw invite."*
+Then point your agent platform at `skills/ovoclaw-connect/` and its `SKILL.md` —
+the same way on any platform (no platform-specific packaging), e.g. *"You have
+ovoclaw-connect there; read its SKILL.md when the user mentions an OvOclaw
+invite."*
 
 ## Commands
 

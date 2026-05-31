@@ -45,10 +45,8 @@ git clone https://github.com/CammyStory/ovoclaw-skills-playground
 node ovoclaw-skills-playground/skills/ovoclaw-share/dist/cli.js doctor
 ```
 
-- **Claude Code** — install the bundle as a plugin (see the
-  [repo README](../../README.md)); both skills are picked up.
-- **Other platforms** — point the agent at `skills/ovoclaw-share/` and its
-  `SKILL.md`.
+Then point your agent platform at `skills/ovoclaw-share/` and its `SKILL.md` —
+the same way on any platform (no platform-specific packaging).
 
 ## Output contract
 

@@ -3,7 +3,7 @@ import { promises as fs, constants as fsConstants } from 'node:fs';
 import { platform, arch } from 'node:os';
 import { parseArgs, requireString, optionalString, CliError, } from './argparse.js';
 import * as api from './api.js';
-import { STATE_DIR, AUTH_FILE, loadAuth, saveAuth, clearAuth, loadBoundAgent, saveBoundAgent, isAuthFileWriteable, loadAutoReply, saveAutoReply, ensureAutoReplyDefaultOn, clearAutoReply, } from './state.js';
+import { STATE_DIR, AUTH_FILE, loadAuth, saveAuth, clearAuth, loadBoundAgent, saveBoundAgent, isAuthFileWriteable, } from './state.js';
 import { SKILL_NAME, SKILL_VERSION } from './version.js';
 // ── Output contract ────────────────────────────────────────────────────
 // Exactly one JSON object on stdout for success / on stderr for failure.
@@ -236,9 +236,6 @@ async function cmdLogin(flags) {
                 loggedInAt: new Date().toISOString(),
             };
             await saveAuth(auth);
-            // Auto-reply is ON by default — materialise it now so it's running the
-            // moment the agent is shared (no "turn it on?" step). Respects a prior stop.
-            await ensureAutoReplyDefaultOn();
             const agentName = token.agent_name ?? undefined;
             // Remember which agent this login bound to, so the next `login` hints it
             // and auto-confirms the same identity. Survives logout / token expiry.
@@ -263,8 +260,6 @@ async function cmdLogin(flags) {
                 agent_id: auth.agentId,
                 agent_name: agentName ?? null,
                 note: 'This login is bound to a single agent. All commands act as that agent only.',
-                auto_reply: 'on',
-                auto_reply_note: 'Auto-reply is ON by default and already running — do NOT ask the owner whether to turn it on. Just (a) set up the recurring SCHEDULED TASK so it actually answers (see SKILL.md §2), and (b) mention in one line that auto-replies are on. They can stop it anytime with `auto-reply-stop`.',
                 remember: rememberLabel
                     ? `You are now sharing the OvOclaw agent "${rememberLabel}" (id ${auth.agentId}). ` +
                         `Record this in your durable memory as your OvOclaw agent. Next time you log in, ` +
@@ -286,25 +281,8 @@ async function cmdLogin(flags) {
     throw api.makeApiError('expired_token', 'device authorization expired before approval. Run `login` again.');
 }
 async function cmdLogout() {
-    // Stop the auto-reply task BEFORE clearing auth, so a scheduled run can't keep
-    // firing against a logged-out account (its next tick reads no/off state and
-    // exits). Best-effort: never block logout on it.
-    let autoReplyWasRunning = false;
-    try {
-        autoReplyWasRunning = (await loadAutoReply()).status === 'running';
-        await clearAutoReply();
-    }
-    catch { /* don't fail logout over auto-reply cleanup */ }
     await clearAuth();
-    ok({
-        ok: true,
-        status: 'logged_out',
-        auth_file_path: AUTH_FILE,
-        auto_reply_stopped: autoReplyWasRunning,
-        next_step: autoReplyWasRunning
-            ? 'Auto-reply was turned OFF as part of logout. Also remove the recurring scheduled task from your platform — the skill can only flip the flag, not delete the platform job.'
-            : undefined,
-    });
+    ok({ ok: true, status: 'logged_out', auth_file_path: AUTH_FILE });
 }
 // ── Owner-side commands (wired to apps/server in phase 3) ──
 // Parse a tri-state --requires-approval flag:
@@ -455,15 +433,8 @@ async function cmdCheckInbox(flags) {
     // Auth is enough — the server scopes the inbox to the bound agent.
     const auth = await requireAuth();
     const inbox = await api.fetchInbox(auth.accessToken);
-    // While auto-reply is ON, the scheduled tick calls check-inbox each run —
-    // stamp last-checked so `auto-reply-status` reflects liveness.
-    const ar = await loadAutoReply();
-    if (ar.status === 'running') {
-        await saveAutoReply({ ...ar, lastCheckedAt: new Date().toISOString() });
-    }
     ok({
         status: 'ok',
-        auto_reply: ar.status,
         pending_count: inbox.pending_requests.length,
         unread_count: inbox.new_messages.length,
         thread_count: inbox.threads.length,
@@ -483,86 +454,7 @@ async function cmdRespond(flags) {
     const content = requireString(flags, 'content', 'respond');
     const { auth, agentId } = await requireBoundAgent();
     const result = await api.postReply(auth.accessToken, agentId, connectionId, content);
-    // Count auto-replies so `auto-reply-status` shows how many went out.
-    const ar = await loadAutoReply();
-    if (ar.status === 'running') {
-        await saveAutoReply({ ...ar, repliesSent: ar.repliesSent + 1 });
-    }
     ok({ status: 'sent', agent_id: agentId, connection_id: connectionId, ...result });
-}
-// ── Auto-reply controls (owner) ────────────────────────────────────────────
-// Liveness: the scheduled task stamps `lastCheckedAt` every tick (via
-// check-inbox). If the flag says `running` but no tick has landed in this long,
-// the background task has silently died / was never set up → report `stalled` so
-// the agent can re-arm it. Sized at ~3 ticks of the 300s (5-min) default cadence
-// to avoid false alarms on a single late tick.
-const AUTO_STALL_AFTER_MS = 15 * 60_000;
-function autoReplyHealth(ar) {
-    if (ar.status !== 'running')
-        return { state: 'off', last_tick_at: ar.lastCheckedAt ?? null, stale_minutes: null };
-    const now = Date.now();
-    const ref = ar.lastCheckedAt ?? ar.startedAt;
-    if (!ref)
-        return { state: 'starting', last_tick_at: null, stale_minutes: null };
-    const age = now - new Date(ref).getTime();
-    if (!ar.lastCheckedAt) {
-        // running but no tick yet: grace period right after start, else stalled.
-        if (age < AUTO_STALL_AFTER_MS)
-            return { state: 'starting', last_tick_at: null, stale_minutes: null };
-        return { state: 'stalled', last_tick_at: null, stale_minutes: Math.round(age / 60000), recommendation: 'Auto-reply is ON but no scheduled run has happened since it started — the scheduled task is probably not set up or not firing. Re-create the scheduled task, then run `auto-reply-restart`.' };
-    }
-    if (age < AUTO_STALL_AFTER_MS)
-        return { state: 'healthy', last_tick_at: ar.lastCheckedAt, stale_minutes: Math.round(age / 60000) };
-    return { state: 'stalled', last_tick_at: ar.lastCheckedAt, stale_minutes: Math.round(age / 60000), recommendation: `Auto-reply is ON but the background task hasn't run for ~${Math.round(age / 60000)} min — it likely stopped. Re-create the scheduled task, then run \`auto-reply-restart\`.` };
-}
-function autoReplyView(ar) {
-    return {
-        auto_reply: {
-            status: ar.status,
-            started_at: ar.startedAt ?? null,
-            last_checked_at: ar.lastCheckedAt ?? null,
-            replies_sent: ar.repliesSent,
-            // Is the background task actually alive? healthy | stalled | starting | off.
-            health: autoReplyHealth(ar),
-        },
-    };
-}
-async function cmdAutoReplyStart() {
-    await requireBoundAgent(); // must be logged in + bound to an agent
-    const ar = { status: 'running', startedAt: new Date().toISOString(), repliesSent: 0 };
-    await saveAutoReply(ar);
-    ok({
-        status: 'auto_reply_started',
-        ...autoReplyView(ar),
-        next_step: 'Auto-reply is ON. The flag alone does NOT answer messages — now set up a recurring SCHEDULED TASK with your platform scheduler (a QClaw scheduled task / cron / routine) that EACH run: checks `auto-reply-status` → if running, runs `check-inbox` and `respond` to each un-replied thread → then exits silently (never auto-approve new connection requests). See "After login: serve the agent" in SKILL.md.',
-    });
-}
-async function cmdAutoReplyStop() {
-    const ar = await loadAutoReply();
-    const next = { ...ar, status: 'off' };
-    await saveAutoReply(next);
-    ok({
-        status: 'auto_reply_stopped',
-        ...autoReplyView(next),
-        note: 'Auto-reply is OFF — the scheduled task reads this and stops answering. You can also remove the scheduled task from your platform.',
-    });
-}
-async function cmdAutoReplyStatus() {
-    const ar = await loadAutoReply();
-    ok({ status: 'ok', ...autoReplyView(ar) });
-}
-// Restart the auto-reply task: re-arm the flag (fresh start, counters reset) so a
-// stalled/dead scheduled task can be brought back. The agent must ALSO re-create
-// the platform scheduled task — the flag alone doesn't answer (see next_step).
-async function cmdAutoReplyRestart() {
-    await requireBoundAgent();
-    const ar = { status: 'running', startedAt: new Date().toISOString(), repliesSent: 0 };
-    await saveAutoReply(ar);
-    ok({
-        status: 'auto_reply_restarted',
-        ...autoReplyView(ar),
-        next_step: 'Auto-reply re-armed (counters reset, health back to starting). The flag alone does NOT answer — now (re-)create the recurring SCHEDULED TASK with your platform scheduler so each run checks `auto-reply-status` → if running, `check-inbox` + `respond` to un-replied threads → exit silently. If it was already scheduled and just stalled, recreating the task is what actually fixes it. See "After login: serve the agent" in SKILL.md.',
-    });
 }
 async function cmdReadConversation(flags) {
     const connectionId = requireString(flags, 'connection-id', 'read-conversation');
@@ -620,10 +512,6 @@ function cmdHelp() {
             { name: 'check-inbox', description: 'This agent\'s pending requests + new inbound messages' },
             { name: 'respond', description: 'Reply on a connection. --connection-id <id> --content "<text>"' },
             { name: 'read-conversation', description: 'Read history on a connection. --connection-id <id> [--since <seq>]' },
-            { name: 'auto-reply-start', description: 'Turn ON auto-replies (then set up a scheduled task — see SKILL.md §2). The on switch + status the scheduled run reads.' },
-            { name: 'auto-reply-stop', description: 'Turn OFF auto-replies (the scheduled task reads this and stops answering).' },
-            { name: 'auto-reply-status', description: 'Check auto-reply incl. HEALTH (healthy/stalled/starting/off) — is the background task actually alive? Plus started_at, last_checked_at, replies_sent.' },
-            { name: 'auto-reply-restart', description: 'Re-arm a stalled/dead auto-reply task (resets + status running). Then re-create the scheduled task — that\'s what actually revives it.' },
             { name: 'help', description: 'Print this JSON help' },
         ],
     });
@@ -659,10 +547,6 @@ async function main() {
         case 'check-inbox': return cmdCheckInbox(flags);
         case 'respond': return cmdRespond(flags);
         case 'read-conversation': return cmdReadConversation(flags);
-        case 'auto-reply-start': return cmdAutoReplyStart();
-        case 'auto-reply-stop': return cmdAutoReplyStop();
-        case 'auto-reply-status': return cmdAutoReplyStatus();
-        case 'auto-reply-restart': return cmdAutoReplyRestart();
         default:
             throw new CliError(`Unknown subcommand: ${subcommand}. Run with --help to see available commands.`);
     }

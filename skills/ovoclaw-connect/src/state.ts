@@ -6,21 +6,6 @@ import { randomBytes } from 'node:crypto'
 export const STATE_DIR = join(homedir(), '.ovoclaw-connect')
 export const STATE_FILE = join(STATE_DIR, 'sessions.json')
 
-// Auto-converse (Phase 1): per-session on/off state for the autonomous
-// introduction task. The POLICY (objective/tone/ceilings/guardrails) is fixed in
-// the skill (see AUTO_POLICY in cli.ts) — this block only tracks toggle+progress.
-export type AutoStatus = 'running' | 'needs_owner' | 'done' | 'off'
-export interface AutoTask {
-  status: AutoStatus
-  turnsUsed: number
-  startedAt: string       // ISO 8601
-  lastSummary?: string
-  // Heartbeat: the scheduled tick stamps this each run (via check-replies /
-  // send-message). `auto-status` compares it to now to tell whether the
-  // background task is actually alive (healthy) or has silently died (stalled).
-  lastTickAt?: string     // ISO 8601
-}
-
 export interface Session {
   handle: string
   slug: string
@@ -33,7 +18,6 @@ export interface Session {
   conversationId?: string
   lastSeq: number
   createdAt: string
-  auto?: AutoTask
 }
 
 const DIR = STATE_DIR
@@ -140,45 +124,6 @@ export async function updateSession(
 
 export function newHandle(): string {
   return 's_' + randomBytes(8).toString('hex')
-}
-
-// ── Global auto-converse preference ────────────────────────────────────────
-// Auto-converse is the agent's DEFAULT behaviour — when you connect, your agent
-// and theirs introduce themselves automatically. So this defaults to ENABLED
-// with no setup question; the owner only ever sets it to turn it OFF. Stored
-// separately from sessions so it survives reconnects. `configuredAt` present =
-// the owner has explicitly changed it.
-export const CONFIG_FILE = join(STATE_DIR, 'config.json')
-
-export interface ConfigState {
-  autoMode: { enabled: boolean; configuredAt?: string }
-}
-
-export async function loadConfig(): Promise<ConfigState> {
-  try {
-    const raw = await fs.readFile(CONFIG_FILE, 'utf8')
-    const p = JSON.parse(raw)
-    if (p && typeof p === 'object' && p.autoMode && typeof p.autoMode === 'object') {
-      return {
-        autoMode: {
-          // Only an explicit `enabled: false` turns it off; anything else is on.
-          enabled: p.autoMode.enabled !== false,
-          configuredAt: typeof p.autoMode.configuredAt === 'string' ? p.autoMode.configuredAt : undefined,
-        },
-      }
-    }
-  } catch (e) {
-    if ((e as NodeJS.ErrnoException).code !== 'ENOENT') throw e
-  }
-  // No config yet → ON by default (auto-converse is the agent's default).
-  return { autoMode: { enabled: true } }
-}
-
-export async function saveConfig(cfg: ConfigState): Promise<void> {
-  await fs.mkdir(DIR, { recursive: true, mode: 0o700 })
-  try { await fs.chmod(DIR, 0o700) } catch {}
-  await fs.writeFile(CONFIG_FILE, JSON.stringify(cfg, null, 2), { mode: 0o600 })
-  try { await fs.chmod(CONFIG_FILE, 0o600) } catch {}
 }
 
 // ── Login-mode auth (registered connector) ────────────────────────────────

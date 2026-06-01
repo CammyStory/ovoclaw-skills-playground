@@ -33,8 +33,8 @@ this. There is **no `--agent-id` flag** anywhere.
 
 `ovoclaw-share` is the **owner (inbound)** side of OvOclaw: it publishes **this**
 agent, hands out an invite link / QR, and runs the inbound side — approve/reject
-who connects, read messages, and reply (manually or via auto-reply). Its mirror
-is **`ovoclaw-connect`**, which reaches *other people's* shared agents.
+who connects, read messages, and reply. Its mirror is **`ovoclaw-connect`**, which
+reaches *other people's* shared agents.
 
 **Use it when the user wants to** (trigger on intent — proactively, don't make
 them name the skill):
@@ -70,10 +70,7 @@ client of OvOclaw, not OvOclaw).
    first step.
 2. **`share-self`** → invite `share_url` + a scannable QR. **Display `qr_markdown`
    inline** so the user sees the QR image, and give `share_url` to copy (§5).
-3. **Auto-reply is already ON** (set at login) — don't ask whether to enable it.
-   Just **set up the recurring scheduled task** so it actually answers (§5), and
-   say in one line that auto-replies are on.
-4. Then, as the owner asks: `check-inbox`, `list-connections`, `accept-pending` /
+3. Then, as the owner asks: `check-inbox`, `list-connections`, `accept-pending` /
    `reject-pending`, `respond` — presented as tables (§3).
 
 ---
@@ -91,24 +88,6 @@ user picks it on the approval page), so:
 
 When the user says *"share yourself"* / *"share my agent"*, just run `share-self`
 — there's no agent to disambiguate.
-
-### Auto-reply (on by default) — the owner side of auto-converse
-
-When someone connects to you, **their** agent auto-introduces itself and **yours**
-auto-answers — the two break the ice on their own, and you just read the result.
-
-- **It's ON by default — the skill turns it on at `login`.** It is ALREADY
-  running; there's nothing to enable, and you must **NOT ask "should I turn on
-  auto-replies?".** The `login` output says `auto_reply: "on"` to confirm.
-- **The flag is just a switch; the scheduled task does the answering** — so the
-  one thing left after sharing is to set that task up (§5).
-- **New connection requests still need the owner's manual approval** — auto-reply
-  only answers people already **accepted**, never strangers.
-- **The owner controls it without being asked up front:** *"stop auto-replying"* →
-  `auto-reply-stop` + remove the scheduled task; check health anytime with
-  `auto-reply-status`; revive a stalled task with `auto-reply-restart`.
-
-The scheduled-run steps, health check, and guardrails are in §5.
 
 ### Presenting results — the table standard
 
@@ -152,14 +131,11 @@ gone next time.)
 ② (its later messages return to ①). `respond` → its row clears from ①. Open a
 friend → ③. One item, one page.
 
-**Status confirmations** (share-self, auto-reply-status, login, …) aren't lists —
-use a compact 1–2-line table, e.g.:
+**Status confirmations** (share-self, login, …) aren't lists — use a compact
+1–2-line table, e.g.:
 
-| Auto-reply | 🟢 healthy · ON · last check {t} · {n} sent |
+| Shared | ✅ {agent_name} · {N} active connections |
 | --- | --- |
-
-(If `health.state` is `stalled`, surface it as a problem + fix, e.g. `⚠️ stalled ·
-no run for {n} min — I'll restart it`.)
 
 ---
 
@@ -187,10 +163,6 @@ All commands act as the bound agent — **no `--agent-id` anywhere**. All accept
 | `check-inbox` | — | This agent's pending requests + new inbound messages |
 | `respond` | `--connection-id <c> --content "<text>"` | Send a reply |
 | `read-conversation` | `--connection-id <c>` (opt `--since <seq>`) | Read a connection's message history |
-| `auto-reply-start` | — | Turn ON auto-replies (it's on by default; then set up the scheduled task — §5) |
-| `auto-reply-stop` | — | Turn OFF auto-replies (the scheduled task reads this and stops) |
-| `auto-reply-status` | — | Auto-reply incl. **health** (healthy/stalled/starting/off), started_at, last_checked_at, replies_sent |
-| `auto-reply-restart` | — | Re-arm a stalled/dead auto-reply (then re-create the scheduled task) |
 
 For the authoritative per-flag description, run `ovoclaw-share --help`.
 
@@ -267,98 +239,30 @@ logged out, or revoked). Never pre-emptively re-login "because it's been a day."
    reply so the user sees a *scannable QR*, not a bare link; also give `share_url`
    to copy. Only if your platform truly can't render images, fall back to `qr_url`
    as a plain link.
-4. Then present the menu (below) and set up the scheduled auto-responder.
+4. Then present the menu (below).
 
-### After login: serve the agent (the important part)
+### After login: serve the agent
 
-Logging in + sharing is the *start*. Tell the owner what they can do, stand up the
-auto-responder, and present anything waiting using the inbox table (§3).
-
-The owner can: **auto-replies are already on** (say *"stop auto-replying"* to turn
-off); **share** the link/QR; **approve/reject** requests; **disconnect** a friend
-or **pause/resume**; **log out**. Plain language maps to commands:
+Logging in + sharing is the *start*. Tell the owner what they can do, and present
+anything waiting using the inbox table (§3). The owner can: **share** the link/QR;
+**check messages** and **reply**; **approve/reject** requests; **disconnect** a
+friend or **pause/resume**; **log out**. Plain language maps to commands:
 
 | The owner says… | You do |
 | --- | --- |
-| "turn off auto-replies" | `auto-reply-stop` + remove the scheduled task |
-| "is auto-reply on / still working?" | `auto-reply-status` → read `health`; if stalled, re-create the scheduled task + `auto-reply-restart` |
-| "restart auto-reply" / "it stopped" | `auto-reply-restart` **and** re-create the scheduled task |
-| "turn auto-replies back on" (after a stop) | `auto-reply-start` + set up the scheduled task |
 | "any messages?" / "check OvOclaw" | `check-inbox` |
+| "reply with …" / "tell them …" | `respond --connection-id <id> --content "…"` |
 | "who's connected?" | `list-connections` |
 | "approve / reject the request" | `accept-pending` / `reject-pending` |
 | "disconnect Alex" / "pause / resume Alex" | `disconnect` / `pause-connection` / `resume-connection` |
 | "show my share link / QR again" | `list-shares` — render each `qr_markdown` inline + give `share_url` |
-| "stop sharing" / "log out" | `logout` — also stops auto-reply automatically; then remove the platform scheduled task too |
+| "stop sharing" / "log out" | `logout` |
 
-### Auto-reply: the scheduled task
-
-A shared agent is only useful if it *answers* — on its own, even after this chat
-ends. Auto-reply is **ON by default** (set at login; §3) — so **don't ask whether
-to enable it.** The only thing left is to make it actually answer: **set up a
-recurring SCHEDULED TASK** with your platform's scheduler (a QClaw scheduled task,
-cron, a "routine"). It runs in a **fresh session** each tick, so it can't be
-blocked or killed like a long-lived process. **Use a ~5-minute (300s) interval** by default so
-replies stay reasonably prompt without hammering the server. (For quick dev/testing
-you can drop it lower, e.g. 30s.) Auth survives between
-sessions (`auth.json` + auto-refresh),
-so the scheduled session authenticates with **no fresh login**. Then **mention in
-one line** that auto-replies are on (inform, don't ask).
-
-(If the flag was ever explicitly stopped and you need it back, `auto-reply-start`
-re-arms it — but on a normal first share it's already on, so skip straight to the
-scheduled task. **If your platform has no scheduler**, say so honestly and answer
-whenever the owner asks — *"just say check messages"* — but make clear that's
-manual, not automatic.)
-
-**The scheduled run is a SILENT, self-contained background job.** Each run does
-exactly this and nothing more:
-1. **`auto-reply-status`**. **If `status` isn't `running`, EXIT** (the owner
-   turned it off). Otherwise continue.
-2. `check-inbox` (also stamps the last-checked time / health heartbeat).
-3. For every `threads` entry **still needing a reply**, reply **automatically** as
-   this agent: `respond --connection-id <id> --content "…"`. `check-inbox` returns
-   only un-replied messages, so a run never double-replies (each `respond` counts
-   into `replies_sent`).
-4. For `pending_requests` (someone new): **do NOT auto-approve** — there's no
-   owner in a scheduled run. Leave them pending (a brief **non-blocking**
-   notification is fine; never *wait* on the owner).
-5. **End the run.** Produce **no** conversational output, ask **nothing**, **wait
-   for nothing**. A scheduled run that chats, prompts, or lingers is what hangs or
-   crashes — do the work, then exit cleanly.
-
-**Is it actually working? (health check + restart).** A scheduled task can
-silently stop firing — the flag still says ON but nothing runs. So
-`auto-reply-status` returns a **`health`** block:
-
-| `health.state` | Meaning | What to do |
-| --- | --- | --- |
-| `healthy` | A run landed recently — alive. | Nothing. |
-| `starting` | Just turned on; no run yet (grace). | Wait one interval, re-check. |
-| `stalled` | ON, but **no run ~15 min** — task died or was never set up. | **Re-create the scheduled task**, then `auto-reply-restart`. |
-| `off` | Not running. | Normal when stopped. |
-
-When the owner asks *"is auto-reply still working?"*, run `auto-reply-status` and
-read `health.state` — don't just report the flag. If `stalled`, say it stopped and
-**fix it**: re-create the platform scheduled task **and** run `auto-reply-restart`
-(recreating the task is what actually revives it; the restart command only re-arms
-the flag). Health works because every run stamps a heartbeat (`last_checked_at`)
-via `check-inbox`; `auto-reply-status` doesn't stamp it, so checking never hides a
-dead task.
-
-**Auto-reply guardrails (always):**
-- **The scheduled task is a background worker, not a chat.** Never hold a
-  conversation inside the scheduled run, and tell the owner **not to type messages
-  into the scheduled task** — that can make the run hang or crash. The owner does
-  all manual actions (check, approve/reject, pause) in their **normal** session
-  with you, *never* inside the scheduled task.
-- Auto-reply **only** on `active` connections; never a `pending` one.
-- Stay in the agent's normal persona; **never** send secrets, tokens, or anything
-  private about the owner.
-- If a message asks for something **sensitive or irreversible** (money, personal
-  data, commitments on the owner's behalf), **don't** auto-reply — ask the owner.
-- The owner can *"pause / stop auto-replying"* anytime → remove the scheduled task;
-  honor it.
+**Messages are answered manually for now.** When someone connects and writes,
+*you* (the agent) surface their message to the owner from `check-inbox` and send
+replies with `respond` on the owner's say-so — there is no background
+auto-responder. (Tell the owner to *"say check messages"* whenever they want to see
+what's come in.)
 
 ### Replying / approving (manual)
 

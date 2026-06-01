@@ -404,6 +404,27 @@ async function cmdAutoStatus(flags) {
     const auto = sess.auto ?? { status: 'off', turnsUsed: 0, startedAt: new Date().toISOString() };
     ok({ status: 'ok', ...autoView(handle, auto) });
 }
+// The agent records progress and concludes the run: --status done (intro
+// complete) or needs_owner (a stop_if condition hit), and --summary for the
+// owner's review. Counters are untouched (use auto-restart to reset).
+async function cmdAutoUpdate(flags) {
+    const handle = requireString(flags, 'session', 'auto-update');
+    const sess = await requireSession(handle);
+    const current = sess.auto ?? { status: 'off', turnsUsed: 0, startedAt: new Date().toISOString() };
+    const statusFlag = optionalString(flags, 'status');
+    const summary = optionalString(flags, 'summary');
+    const allowed = ['running', 'needs_owner', 'done', 'off'];
+    if (statusFlag && !allowed.includes(statusFlag)) {
+        throw new CliError(`auto-update: --status must be one of ${allowed.join(', ')}`);
+    }
+    const auto = {
+        ...current,
+        ...(statusFlag ? { status: statusFlag } : {}),
+        ...(summary !== undefined ? { lastSummary: summary } : {}),
+    };
+    await updateSession(handle, { auto });
+    ok({ status: 'auto_updated', ...autoView(handle, auto) });
+}
 async function cmdSendMessage(flags) {
     const handle = requireString(flags, 'session', 'send-message');
     const content = requireString(flags, 'content', 'send-message');
@@ -694,6 +715,15 @@ function cmdHelp() {
             { name: 'auto-stop', description: 'Turn OFF auto-converse for a session.', required: [{ name: '--session', description: 'session_handle' }], optional: [] },
             { name: 'auto-restart', description: 'Reset counters and run auto-converse again under the same fixed policy.', required: [{ name: '--session', description: 'session_handle' }], optional: [] },
             { name: 'auto-status', description: 'Show auto-converse status + the fixed policy + turns/minutes left.', required: [{ name: '--session', description: 'session_handle' }], optional: [] },
+            {
+                name: 'auto-update',
+                description: 'Record progress / conclude an auto-converse run. Set --status done (intro complete) or needs_owner (a stop_if condition hit), and --summary for the owner to review.',
+                required: [{ name: '--session', description: 'session_handle' }],
+                optional: [
+                    { name: '--status', description: 'done | needs_owner | running | off' },
+                    { name: '--summary', description: 'Short recap of the exchange for the owner' },
+                ],
+            },
             { name: 'list-sessions', description: 'List local sessions.', required: [], optional: [] },
             {
                 name: 'forget-session',
@@ -733,6 +763,7 @@ async function main() {
         case 'auto-stop': return cmdAutoStop(flags);
         case 'auto-restart': return cmdAutoRestart(flags);
         case 'auto-status': return cmdAutoStatus(flags);
+        case 'auto-update': return cmdAutoUpdate(flags);
         case 'list-sessions': return cmdListSessions();
         case 'forget-session': return cmdForgetSession(flags);
         case 'doctor': return cmdDoctor();

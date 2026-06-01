@@ -169,11 +169,27 @@ export async function loadAutoReply(): Promise<AutoReplyState> {
   } catch (e) {
     if ((e as NodeJS.ErrnoException).code !== 'ENOENT') throw e
   }
-  return { status: 'off', repliesSent: 0 }
+  // Default ON: auto-reply is part of the agent's initial design, not something
+  // the owner opts into. Only an explicit `auto-reply-stop` (saved status:'off')
+  // turns it off. So a fresh / never-touched state is RUNNING — the agent never
+  // has to ask "should I turn auto-reply on?".
+  return { status: 'running', repliesSent: 0 }
 }
 
 export async function saveAutoReply(state: AutoReplyState): Promise<void> {
   await ensureDir()
   await fs.writeFile(AUTOREPLY_FILE, JSON.stringify(state, null, 2), { mode: 0o600 })
   try { await fs.chmod(AUTOREPLY_FILE, 0o600) } catch {}
+}
+
+// On login, materialise the default-ON auto-reply state with a real startedAt —
+// so `auto-reply-status` shows running (healthy lifecycle) right after login,
+// tying "auto-reply is on" to login as the initial design. Only writes if the
+// owner has never set it; an explicit prior stop (file exists) is respected.
+export async function ensureAutoReplyDefaultOn(): Promise<void> {
+  try {
+    await fs.access(AUTOREPLY_FILE)
+    return // already configured (running or explicitly off) — leave it
+  } catch { /* absent → create the default-on state below */ }
+  await saveAutoReply({ status: 'running', startedAt: new Date().toISOString(), repliesSent: 0 })
 }

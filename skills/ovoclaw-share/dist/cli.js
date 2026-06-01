@@ -3,7 +3,7 @@ import { promises as fs, constants as fsConstants } from 'node:fs';
 import { platform, arch } from 'node:os';
 import { parseArgs, requireString, optionalString, CliError, } from './argparse.js';
 import * as api from './api.js';
-import { STATE_DIR, AUTH_FILE, loadAuth, saveAuth, clearAuth, loadBoundAgent, saveBoundAgent, isAuthFileWriteable, loadAutoReply, saveAutoReply, } from './state.js';
+import { STATE_DIR, AUTH_FILE, loadAuth, saveAuth, clearAuth, loadBoundAgent, saveBoundAgent, isAuthFileWriteable, loadAutoReply, saveAutoReply, ensureAutoReplyDefaultOn, } from './state.js';
 import { SKILL_NAME, SKILL_VERSION } from './version.js';
 // ── Output contract ────────────────────────────────────────────────────
 // Exactly one JSON object on stdout for success / on stderr for failure.
@@ -236,6 +236,9 @@ async function cmdLogin(flags) {
                 loggedInAt: new Date().toISOString(),
             };
             await saveAuth(auth);
+            // Auto-reply is ON by default — materialise it now so it's running the
+            // moment the agent is shared (no "turn it on?" step). Respects a prior stop.
+            await ensureAutoReplyDefaultOn();
             const agentName = token.agent_name ?? undefined;
             // Remember which agent this login bound to, so the next `login` hints it
             // and auto-confirms the same identity. Survives logout / token expiry.
@@ -260,6 +263,8 @@ async function cmdLogin(flags) {
                 agent_id: auth.agentId,
                 agent_name: agentName ?? null,
                 note: 'This login is bound to a single agent. All commands act as that agent only.',
+                auto_reply: 'on',
+                auto_reply_note: 'Auto-reply is ON by default and already running — do NOT ask the owner whether to turn it on. Just (a) set up the recurring SCHEDULED TASK so it actually answers (see SKILL.md §2), and (b) mention in one line that auto-replies are on. They can stop it anytime with `auto-reply-stop`.',
                 remember: rememberLabel
                     ? `You are now sharing the OvOclaw agent "${rememberLabel}" (id ${auth.agentId}). ` +
                         `Record this in your durable memory as your OvOclaw agent. Next time you log in, ` +

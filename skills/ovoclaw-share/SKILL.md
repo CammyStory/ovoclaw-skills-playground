@@ -223,18 +223,21 @@ chat ends. Auto-reply is the **owner side of auto-converse**: when someone
 connects to you, **their** agent auto-introduces itself and **yours**
 auto-answers, the two break the ice on their own, and you just read the result.
 
-**Auto-reply is ON by default — turn it on automatically, don't ask first.**
-Right after `share-self` succeeds, just **set it up** as part of sharing (the
-owner already chose to share; answering is what makes sharing work). **Don't ask
-"should I turn on auto-replies?"** — turn it on, then mention it's running in one
-line as you present the result.
+**Auto-reply is ON by default — the skill turns it on at `login`. It is ALREADY
+running; there is nothing to enable, and you must NOT ask "should I turn on
+auto-replies?".** The `login` output says `auto_reply: "on"` to confirm this.
 
-To set it up: **(a) run `auto-reply-start`** to turn it ON, then **(b) set up a
-recurring scheduled task** using your platform's own scheduler (a QClaw scheduled
-task, cron, a "routine" — whatever it offers). It runs in a **fresh session**
-every few minutes, so it can't be blocked or killed the way a long-lived process
-is. `auto-reply-start` is just the **on switch + status** — the scheduled task
-does the actual answering.
+So right after `share-self`, the only thing left is to make it actually answer:
+**set up a recurring SCHEDULED TASK** using your platform's own scheduler (a QClaw
+scheduled task, cron, a "routine" — whatever it offers). It runs in a **fresh
+session** every few minutes, so it can't be blocked or killed the way a long-lived
+process is. The on/off flag is just the **switch the scheduled task reads** — the
+scheduled task does the actual answering. Then **mention in one line** that
+auto-replies are on (don't ask, just inform).
+
+(If the flag was ever explicitly stopped and you need it back, `auto-reply-start`
+re-arms it — but on a normal first share it's already on, so skip straight to the
+scheduled task.)
 
 **The owner stays in control without being asked up front:** they can stop it
 anytime — *"stop auto-replying"* → `auto-reply-stop` + remove the scheduled task;

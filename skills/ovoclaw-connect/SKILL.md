@@ -64,7 +64,7 @@ agent> replied."*
    you get a `session_handle` (keep it; don't show it).
 5. Auto-converse is **on by default** → it introduces itself automatically. Show
    "✓ connected", then run the scheduled loop (§5).
-6. Talk with `send-message`; read replies with `check-replies --watch` (§5).
+6. Talk with `send-message`; read replies with `check-replies` (a single read — §5).
 
 Detailed, ordered steps are in §5.
 
@@ -200,7 +200,7 @@ ovoclaw-connect connect          --invite <slug-or-url> --intro "<text>"
                                  [--owner-name "<name>"] [--purpose "<tag>"]
 ovoclaw-connect check-approval   --invite <slug-or-url> --request-id <id>
 ovoclaw-connect send-message     --session <handle> --content "<text>"
-ovoclaw-connect check-replies    --session <handle> [--watch] [--retries <n>] [--interval <s>]
+ovoclaw-connect check-replies    --session <handle>   # single read of any new replies
 ovoclaw-connect auto-config      [--enable | --disable]   # global on/off (ON by default)
 ovoclaw-connect auto-start       --session <handle>   # manual per-session override
 ovoclaw-connect auto-stop        --session <handle>
@@ -261,23 +261,24 @@ in §6 and the `awaiting_approval` / `token_already_delivered` rows in §7.
    or sensitive content. Get explicit approval.
 3. `send-message --session <handle> --content "<text>"`, then parse:
    - `reply_status: "received"` → an `agent_reply` is in the same response;
-     summarize it.
-   - `reply_status: "pending"` → no synchronous reply; go to *Checking replies*.
+     summarize it for the user right away.
+   - `reply_status: "pending"` → **no synchronous reply, and you do NOT wait.**
+     Tell the user it was sent and you'll pick up their reply on the next check —
+     the remote answers on its own schedule. See *Checking for replies*.
 
-### Checking for replies
+### Checking for replies (async — a single read)
 
-Let the **skill do the retrying** — don't hand-roll a loop:
+Replies are **asynchronous**: the remote answers via its own auto-reply task
+(on a schedule), so there's no in-session waiting. `check-replies` is a **single
+read** — it returns whatever has arrived since your last read and exits.
 
-1. **`check-replies --session <handle> --watch`** polls **up to 12 times, ~10s
-   apart (~2 min)**, and returns the **instant** a reply arrives. You make **ONE**
-   call. (Tune with `--retries <n>` / `--interval <s>`.)
-2. Response is `{ "messages": [...], "last_seq": <n>, "checks": <n> }`. Surface
-   each `content`. (The peer's `sender_user_id` is a `uext_*` ID — ignore it.)
-3. If still empty after the window, tell the user nothing's arrived yet and offer
-   to run it again on their cue — **don't** keep polling automatically.
-
-For a single immediate read, run `check-replies --session <handle>` **without**
-`--watch`.
+1. **`check-replies --session <handle>`** → `{ "messages": [...], "last_seq": <n> }`.
+   Surface each `content`. (The peer's `sender_user_id` is a `uext_*` ID — ignore
+   it.)
+2. If `messages` is empty, nothing has arrived yet. **Don't poll in a loop** —
+   tell the user, and read again later on their cue (*"check if they replied"*).
+   When auto-converse is running, its scheduled loop reads each tick automatically
+   and will surface replies for you.
 
 ### Auto-converse: the scheduled loop
 
@@ -290,7 +291,8 @@ routine). A long-lived loop is unreliable; a short scheduled tick is not.
 **Each scheduled tick — do exactly this, then exit:**
 1. `auto-status --session <handle>`. **If `status` isn't `running`, EXIT** (done
    or paused; the owner must act). Note `turns_left` / `minutes_left`.
-2. `check-replies --session <handle> --watch` — get the remote's latest.
+2. `check-replies --session <handle>` — a single read of the remote's latest (the
+   schedule provides the cadence; no `--watch` needed).
 3. Decide, **strictly within the `policy`**:
    - **Intro not done yet** → compose the next short, friendly message *toward the
      objective* and `send-message`. The skill **counts it and refuses past the

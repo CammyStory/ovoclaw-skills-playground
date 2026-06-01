@@ -105,6 +105,25 @@ async function cmdConnect(flags) {
     // If logged in, send the agent:connect bearer → registered (friendship)
     // connect. Otherwise this is a guest connect (today's behaviour).
     const bearer = await loginBearer();
+    // ENFORCED guest-vs-login gate. On a FRESH connect while NOT logged in (and
+    // not explicitly told to proceed as guest), stop and make the agent surface
+    // the choice to the user — so the "saved friendship" option is never silently
+    // skipped. Bypassed when: logged in (registered), --guest is passed (user
+    // chose guest), or a session for this invite already exists (already decided).
+    if (!bearer && flags.guest === undefined) {
+        const prior = (await listSessions()).find((s) => s.slug === slug && s.host === host);
+        if (!prior) {
+            ok({
+                status: 'login_choice_required',
+                message: 'Before connecting to this shared agent, ASK the user HOW they want to connect — do not connect silently.',
+                options: {
+                    guest: 'Quick one-off chat, no signup. To proceed as guest, re-run the SAME connect command with `--guest` added.',
+                    login: 'Become saved FRIENDS — the owner approves you once, then you are recognized next time (no re-approval) and it works across your devices. To do this, run `login` first, then connect again.',
+                },
+                guidance: 'Present BOTH options to the user in plain language and let THEM choose. Do not decide for them, and do not push login for a one-off question. Then act on their choice.',
+            });
+        }
+    }
     // When logged in, present any prior (e.g. guest) session's creds for this
     // invite so the server can CLAIM/upgrade that connection in place — keeping
     // its conversation/history — instead of starting a fresh one.
@@ -536,12 +555,13 @@ function cmdHelp() {
             },
             {
                 name: 'connect',
-                description: 'Open a session via an invite. Persists session_handle locally.',
+                description: 'Open a session via an invite. Persists session_handle locally. If not logged in, first returns status:login_choice_required so you ask the user guest-vs-login (re-run with --guest for guest).',
                 required: [
                     { name: '--invite', description: 'Slug or share URL' },
                     { name: '--intro', description: 'Introduction the remote agent owner will see (max 2000 chars)' },
                 ],
                 optional: [
+                    { name: '--guest', description: 'Proceed as a guest (one-off) connection. Required to connect when not logged in — confirms the user chose guest over a saved friendship.' },
                     { name: '--agent-name', description: 'Display name of the calling agent' },
                     { name: '--owner-name', description: 'Display name of the human user' },
                     { name: '--purpose', description: 'Short purpose tag (max 128 chars)' },

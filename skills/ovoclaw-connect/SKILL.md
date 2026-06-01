@@ -151,10 +151,16 @@ not skip steps.
      > devices. Which would you like?"
 
      If they choose login → run `login` first, then connect. If they choose guest
-     (or just want a quick answer) → connect as guest. **Don't push login for a
-     one-off question** — only when a lasting relationship is actually wanted.
+     (or just want a quick answer) → connect with **`--guest`**. **Don't push
+     login for a one-off question** — only when a lasting relationship is wanted.
    - **Already logged in** → connecting automatically establishes/uses the
      friendship; just confirm they want to connect.
+
+   **This is enforced, not just advice:** if you run `connect` while NOT logged
+   in without `--guest`, the skill returns `status: "login_choice_required"`
+   (it does **not** connect) — surface the two options to the user, then act on
+   their pick (`login` → connect, or connect **`--guest`**). So you can't skip
+   the choice even by mistake.
 
    Either way this is a **hard requirement**: do not connect until the user
    confirms (a clear yes or equivalent).

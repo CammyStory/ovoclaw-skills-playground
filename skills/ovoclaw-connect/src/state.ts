@@ -39,6 +39,26 @@ export interface Session {
 const DIR = STATE_DIR
 const FILE = STATE_FILE
 
+// Atomic write: write to a unique temp file, then rename over the target. rename
+// is atomic on POSIX, so a reader never sees a half-written file and two
+// concurrent writers can't interleave bytes (last rename wins, intact). This
+// guards auth.json / sessions.json against corruption from an interrupted write
+// or an agent firing parallel CLI commands — corruption there reads as "logged
+// out" and forces a needless re-login.
+async function writeFileAtomic(path: string, data: string): Promise<void> {
+  const tmp = `${path}.tmp-${process.pid}-${Date.now()}`
+  await fs.writeFile(tmp, data, { mode: 0o600 })
+  try { await fs.chmod(tmp, 0o600) } catch {}
+  try {
+    await fs.rename(tmp, path)
+  } catch {
+    // Windows can't rename over an existing file — fall back to a direct write.
+    await fs.writeFile(path, data, { mode: 0o600 })
+    try { await fs.chmod(path, 0o600) } catch {}
+    try { await fs.unlink(tmp) } catch {}
+  }
+}
+
 type Store = Record<string, Session>
 
 async function readAll(): Promise<Store> {
@@ -67,12 +87,8 @@ async function writeAll(data: Store): Promise<void> {
   // mkdir's mode flag is only honored when the directory is created. If the
   // directory pre-existed with looser perms (e.g. 0755), the flag is a no-op
   // and the file would be world-readable through its parent. Force the mode.
-  // Same logic for the file below: writeFile's mode flag is only applied on
-  // initial create. chmod ensures the perms after every write. Best-effort
-  // on platforms where chmod is a no-op (Windows).
   try { await fs.chmod(DIR, 0o700) } catch {}
-  await fs.writeFile(FILE, JSON.stringify(data, null, 2), { mode: 0o600 })
-  try { await fs.chmod(FILE, 0o600) } catch {}
+  await writeFileAtomic(FILE, JSON.stringify(data, null, 2))
 }
 
 export async function saveSession(s: Session): Promise<void> {
@@ -218,12 +234,12 @@ export async function saveAuth(auth: AuthState): Promise<void> {
   await fs.mkdir(DIR, { recursive: true, mode: 0o700 })
   try { await fs.chmod(DIR, 0o700) } catch {}
   const json = JSON.stringify(auth, null, 2)
-  await fs.writeFile(AUTH_FILE, json, { mode: 0o600 })
-  try { await fs.chmod(AUTH_FILE, 0o600) } catch {}
+  // Atomic so a refresh's rotated token always lands intact — a torn write here
+  // would lose the new refresh token and force a re-login.
+  await writeFileAtomic(AUTH_FILE, json)
   // Mirror to the backup so a lost/corrupt auth.json can self-heal on next load.
   try {
-    await fs.writeFile(AUTH_BACKUP_FILE, json, { mode: 0o600 })
-    try { await fs.chmod(AUTH_BACKUP_FILE, 0o600) } catch {}
+    await writeFileAtomic(AUTH_BACKUP_FILE, json)
   } catch { /* best-effort */ }
 }
 

@@ -240,6 +240,14 @@ For the authoritative per-flag description as JSON, run `ovoclaw-connect --help`
      `--guest` returns `status: "login_choice_required"` (it does **not**
      connect). Surface both options, then act on their pick. You can't skip the
      choice by mistake.
+   - **Never loop `login`.** If you *just* logged in (`login` returned
+     `authenticated`, or `doctor` shows `login.mode: login`) and `connect` STILL
+     returns `login_choice_required`, the login is **not persisting between
+     commands** — do **NOT** keep re-running `login` (that's the "it asks me to
+     log in again and again" loop). Run `doctor` once: if it reports
+     `login.mode: guest` right after a successful login, tell the user their
+     environment isn't keeping `~/.ovoclaw-connect/auth.json` between tool calls
+     (a sandbox / different-HOME issue), and stop — re-logging-in won't help.
 4. **Draft the `--intro` and get approval.** It's visible to the remote owner and
    maybe the remote agent — show the exact text, proceed only after a yes.
 5. **`connect` only after explicit confirmation** of both connection and intro.

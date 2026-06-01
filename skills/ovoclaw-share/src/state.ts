@@ -43,6 +43,23 @@ async function ensureDir(): Promise<void> {
   try { await fs.chmod(DIR, 0o700) } catch {}
 }
 
+// Atomic write: temp file + rename (atomic on POSIX), so a reader never sees a
+// half-written file and concurrent writers can't interleave bytes. Guards
+// auth.json against corruption from an interrupted/parallel write — corruption
+// there reads as "logged out" and forces a needless re-login.
+async function writeFileAtomic(path: string, data: string): Promise<void> {
+  const tmp = `${path}.tmp-${process.pid}-${Date.now()}`
+  await fs.writeFile(tmp, data, { mode: 0o600 })
+  try { await fs.chmod(tmp, 0o600) } catch {}
+  try {
+    await fs.rename(tmp, path)
+  } catch {
+    await fs.writeFile(path, data, { mode: 0o600 })
+    try { await fs.chmod(path, 0o600) } catch {}
+    try { await fs.unlink(tmp) } catch {}
+  }
+}
+
 // Read + validate an auth file. Returns null for missing (ENOENT) or corrupt /
 // malformed contents; rethrows only unexpected fs errors (e.g. permissions).
 async function readAuthFrom(path: string): Promise<AuthState | null> {
@@ -80,12 +97,11 @@ export async function loadAuth(): Promise<AuthState | null> {
 export async function saveAuth(auth: AuthState): Promise<void> {
   await ensureDir()
   const json = JSON.stringify(auth, null, 2)
-  await fs.writeFile(FILE, json, { mode: 0o600 })
-  try { await fs.chmod(FILE, 0o600) } catch {}
+  // Atomic so a refresh's rotated token always lands intact.
+  await writeFileAtomic(FILE, json)
   // Mirror to the backup so a lost/corrupt auth.json can self-heal on next load.
   try {
-    await fs.writeFile(AUTH_BACKUP_FILE, json, { mode: 0o600 })
-    try { await fs.chmod(AUTH_BACKUP_FILE, 0o600) } catch {}
+    await writeFileAtomic(AUTH_BACKUP_FILE, json)
   } catch { /* backup is best-effort; never fail a login over it */ }
 }
 

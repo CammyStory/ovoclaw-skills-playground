@@ -6,6 +6,17 @@ import { randomBytes } from 'node:crypto'
 export const STATE_DIR = join(homedir(), '.ovoclaw-connect')
 export const STATE_FILE = join(STATE_DIR, 'sessions.json')
 
+// Auto-converse (Phase 1): per-session on/off state for the autonomous
+// introduction task. The POLICY (objective/tone/ceilings/guardrails) is fixed in
+// the skill (see AUTO_POLICY in cli.ts) — this block only tracks toggle+progress.
+export type AutoStatus = 'running' | 'needs_owner' | 'done' | 'off'
+export interface AutoTask {
+  status: AutoStatus
+  turnsUsed: number
+  startedAt: string       // ISO 8601
+  lastSummary?: string
+}
+
 export interface Session {
   handle: string
   slug: string
@@ -18,6 +29,7 @@ export interface Session {
   conversationId?: string
   lastSeq: number
   createdAt: string
+  auto?: AutoTask
 }
 
 const DIR = STATE_DIR

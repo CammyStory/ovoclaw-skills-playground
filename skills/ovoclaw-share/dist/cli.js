@@ -443,54 +443,6 @@ async function cmdDisconnect(flags) {
 async function cmdRotateToken(flags) {
     return actOnConnectionCmd(flags, 'rotate-token', 'connection-id', 'rotate-token', 'token_rotated');
 }
-async function cmdCheckInbox(flags) {
-    void flags;
-    // Auth is enough — the server scopes the inbox to the bound agent.
-    const auth = await requireAuth();
-    const inbox = await api.fetchInbox(auth.accessToken);
-    ok({
-        status: 'ok',
-        pending_count: inbox.pending_requests.length,
-        unread_count: inbox.new_messages.length,
-        thread_count: inbox.threads.length,
-        new_messages_truncated: inbox.new_messages_truncated,
-        // DISPLAY THIS: per-friend threads (messages still needing a reply, grouped
-        // by sender, chronological within each, most-recent friend first). See the
-        // "Presenting the inbox" layout in SKILL.md.
-        threads: inbox.threads,
-        pending_requests: inbox.pending_requests,
-        // Flat list kept for convenience; prefer `threads` for display.
-        new_messages: inbox.new_messages,
-        last_seq_by_connection: inbox.last_seq_by_connection,
-    });
-}
-async function cmdRespond(flags) {
-    const connectionId = requireString(flags, 'connection-id', 'respond');
-    const content = requireString(flags, 'content', 'respond');
-    const { auth, agentId } = await requireBoundAgent();
-    const result = await api.postReply(auth.accessToken, agentId, connectionId, content);
-    ok({ status: 'sent', agent_id: agentId, connection_id: connectionId, ...result });
-}
-async function cmdReadConversation(flags) {
-    const connectionId = requireString(flags, 'connection-id', 'read-conversation');
-    const since = optionalString(flags, 'since');
-    const limit = optionalString(flags, 'limit');
-    const { auth, agentId } = await requireBoundAgent();
-    const history = await api.readConversation(auth.accessToken, agentId, connectionId, {
-        since: since !== undefined ? Math.max(0, Number(since) || 0) : undefined,
-        limit: limit !== undefined ? Number(limit) || undefined : undefined,
-    });
-    ok({
-        status: 'ok',
-        agent_id: agentId,
-        connection_id: connectionId,
-        conversation_id: history.conversation_id,
-        message_count: history.messages.length,
-        last_seq: history.last_seq,
-        has_more: history.has_more,
-        messages: history.messages,
-    });
-}
 // ── Directive + per-friend memory (docs/profile-memory-design.md) ─────
 // The talk loop: before replying on a connection, call `recall` to load your
 // private Directive + public Profile + your memory of THIS friend; after
@@ -757,8 +709,6 @@ function cmdHelp() {
             { name: 'revoke-share', description: 'Revoke this agent\'s share (invalidates the slug)' },
             { name: 'regenerate-share', description: 'Mint a new slug for this agent\'s share' },
             { name: 'list-connections', description: 'List this agent\'s inbound connections. Optional: --status' },
-            { name: 'accept-pending', description: 'Approve a pending request. --request-id <id>' },
-            { name: 'reject-pending', description: 'Reject a pending request. --request-id <id>' },
             { name: 'pause-connection', description: 'Pause a connection. --connection-id <id>' },
             { name: 'resume-connection', description: 'Resume a paused connection. --connection-id <id>' },
             { name: 'disconnect', description: 'Terminate a connection. --connection-id <id>' },
@@ -805,8 +755,6 @@ async function main() {
         case 'revoke-share': return cmdRevokeShare();
         case 'regenerate-share': return cmdRegenerateShare(flags);
         case 'list-connections': return cmdListConnections(flags);
-        case 'accept-pending': return cmdAcceptPending(flags);
-        case 'reject-pending': return cmdRejectPending(flags);
         case 'pause-connection': return cmdPauseConnection(flags);
         case 'resume-connection': return cmdResumeConnection(flags);
         case 'disconnect': return cmdDisconnect(flags);

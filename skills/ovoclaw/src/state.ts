@@ -2,10 +2,21 @@ import { promises as fs, constants as fsConstants } from 'node:fs'
 import { homedir } from 'node:os'
 import { join } from 'node:path'
 
-// Owner-side state. Distinct directory from ovoclaw-connect's
-// ~/.ovoclaw-connect/ so playground share state and playground
-// connect state can coexist on the same machine without colliding.
-export const STATE_DIR = join(homedir(), '.ovoclaw-share')
+// Owner-side state, under ~/.ovoclaw-share/.
+//
+// PER-AGENT NAMESPACING. On a platform that runs MULTIPLE agents under the same
+// home, they would all read the SAME ~/.ovoclaw-share/auth.json and therefore
+// act as the SAME OvOclaw agent — one agent's login would leak to the others.
+// To keep each platform agent's login bound to ITS OWN session, the platform
+// sets `OVOCLAW_AGENT_KEY` to a stable per-agent identifier; state then lives in
+// ~/.ovoclaw-share/agents/<key>/ (its own auth.json / agent.json / sessions.json).
+// Unset → the shared default dir (single-agent installs, unchanged). A platform
+// running more than one agent MUST set this per agent.
+export const AGENT_KEY = (process.env.OVOCLAW_AGENT_KEY ?? '').trim()
+const STATE_BASE = join(homedir(), '.ovoclaw-share')
+export const STATE_DIR = AGENT_KEY
+  ? join(STATE_BASE, 'agents', AGENT_KEY.replace(/[^a-zA-Z0-9_.-]/g, '_').slice(0, 64) || 'default')
+  : STATE_BASE
 export const AUTH_FILE = join(STATE_DIR, 'auth.json')
 // A mirror of auth.json written on every save. If auth.json is later lost or
 // corrupted (e.g. an interrupted write, or a clumsy skill update), loadAuth

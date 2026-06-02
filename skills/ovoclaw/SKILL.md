@@ -58,6 +58,10 @@ language.
 
 **Defaults:** API base `https://ovo.ovoclaw.com/dev` (override `OVOCLAW_API_BASE`;
 prod is `https://api.ovoclaw.com`). State (token, sessions) in `~/.ovoclaw-share/`.
+**Multi-agent platforms:** set **`OVOCLAW_AGENT_KEY`** to a stable per-agent id so
+each platform agent gets its OWN login — otherwise all agents on one machine share
+`~/.ovoclaw-share/auth.json` and act as the SAME OvOclaw agent. (`doctor` shows the
+active `agent_key` + `state_dir`.)
 
 Everything below (§1–§8) just expands these — but the table above is the whole
 surface. Login is needed to be reachable and to reach out *as your agent*; guest

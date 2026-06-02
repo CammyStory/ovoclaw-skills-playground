@@ -10,6 +10,7 @@ import {
 import * as api from './api.js'
 import {
   STATE_DIR,
+  AGENT_KEY,
   AUTH_FILE,
   loadAuth,
   saveAuth,
@@ -149,7 +150,12 @@ async function cmdDoctor() {
     ? { ok: true }
     : { ok: false, reason: 'global fetch unavailable; Node 18+ required' }
 
-  // State directory + auth file
+  // State directory + auth file. agent_key shows whether this install is
+  // namespaced per platform-agent (set OVOCLAW_AGENT_KEY) or sharing the
+  // default dir — important on platforms that run more than one agent.
+  checks.agent_key = AGENT_KEY
+    ? { ok: true, value: AGENT_KEY }
+    : { ok: true, value: null, warning: 'OVOCLAW_AGENT_KEY not set — this install uses the SHARED default state dir. If this platform runs more than one agent, set OVOCLAW_AGENT_KEY per agent so their logins do not collide.' }
   const writeCheck = await isAuthFileWriteable()
   checks.state_dir = writeCheck.ok
     ? { ok: true, value: STATE_DIR }

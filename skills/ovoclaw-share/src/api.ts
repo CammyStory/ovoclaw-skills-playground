@@ -481,5 +481,75 @@ export async function readConversation(
   })
 }
 
+// ── Directive (private, owner-only) ──────────────────────────────────
+// The owner's prescriptive instructions to the agent (rules + purpose +
+// info-handling standard). Private; only the owner reads/edits it; it is NEVER
+// disclosed to a connecting friend.
+export async function getDirective(bearer: string, agentId: string): Promise<{ content: string }> {
+  return jsonFetch<{ content: string }>({
+    method: 'GET',
+    path: `/agents/${encodeURIComponent(agentId)}/directive`,
+    bearer,
+  })
+}
+
+export async function setDirective(bearer: string, agentId: string, content: string): Promise<{ ok: true }> {
+  return jsonFetch<{ ok: true }>({
+    method: 'PUT',
+    path: `/agents/${encodeURIComponent(agentId)}/directive`,
+    bearer,
+    body: { content },
+  })
+}
+
+// ── Read-before-talk context + write-after-talk memory ───────────────
+export interface FriendMemoryItem {
+  id: string
+  kind: 'fact' | 'preference' | 'event' | 'summary'
+  content: string
+  disclosure: 'private' | 'friend_shared'
+  confidence: number | null
+  source_seq: number | null
+  updated_at: string
+}
+export interface TalkContext {
+  // directive.disclose is always false — it shapes HOW you reply, never shown.
+  directive: { content: string; disclose: false }
+  profile: { name: string; description: string | null; avatar_url: string | null } | null
+  friend_memory: FriendMemoryItem[]
+  mode: 'guest' | 'registered'
+}
+export async function getTalkContext(
+  bearer: string, agentId: string, connectionId: string,
+): Promise<TalkContext> {
+  return jsonFetch<TalkContext>({
+    method: 'GET',
+    path: `/agents/${encodeURIComponent(agentId)}/external-connections/${encodeURIComponent(connectionId)}/context`,
+    bearer,
+  })
+}
+
+export interface MemoryDelta {
+  op: 'add' | 'update' | 'supersede'
+  scope: 'friend'
+  friend_id: string
+  kind: 'fact' | 'preference' | 'event' | 'summary'
+  content: string
+  disclosure?: 'private' | 'friend_shared'
+  confidence?: number
+  supersedes?: string
+  source_seq?: number
+}
+export async function submitMemory(
+  bearer: string, agentId: string, connectionId: string, deltas: MemoryDelta[],
+): Promise<{ ok: true; applied: number }> {
+  return jsonFetch<{ ok: true; applied: number }>({
+    method: 'POST',
+    path: `/agents/${encodeURIComponent(agentId)}/external-connections/${encodeURIComponent(connectionId)}/memory`,
+    bearer,
+    body: { memory_deltas: deltas },
+  })
+}
+
 // Re-export the AuthState type for convenience in cli.ts.
 export type { AuthState }

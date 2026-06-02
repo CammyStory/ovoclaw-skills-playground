@@ -245,3 +245,37 @@ export async function readConversation(bearer, agentId, connectionId, opts = {})
         bearer,
     });
 }
+// ── Directive (private, owner-only) ──────────────────────────────────
+// The owner's prescriptive instructions to the agent (rules + purpose +
+// info-handling standard). Private; only the owner reads/edits it; it is NEVER
+// disclosed to a connecting friend.
+export async function getDirective(bearer, agentId) {
+    return jsonFetch({
+        method: 'GET',
+        path: `/agents/${encodeURIComponent(agentId)}/directive`,
+        bearer,
+    });
+}
+export async function setDirective(bearer, agentId, content) {
+    return jsonFetch({
+        method: 'PUT',
+        path: `/agents/${encodeURIComponent(agentId)}/directive`,
+        bearer,
+        body: { content },
+    });
+}
+export async function getTalkContext(bearer, agentId, connectionId) {
+    return jsonFetch({
+        method: 'GET',
+        path: `/agents/${encodeURIComponent(agentId)}/external-connections/${encodeURIComponent(connectionId)}/context`,
+        bearer,
+    });
+}
+export async function submitMemory(bearer, agentId, connectionId, deltas) {
+    return jsonFetch({
+        method: 'POST',
+        path: `/agents/${encodeURIComponent(agentId)}/external-connections/${encodeURIComponent(connectionId)}/memory`,
+        bearer,
+        body: { memory_deltas: deltas },
+    });
+}

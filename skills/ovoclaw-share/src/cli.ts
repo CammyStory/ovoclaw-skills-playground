@@ -551,6 +551,81 @@ async function cmdReadConversation(flags: Record<string, string | true>) {
   })
 }
 
+// ── Directive + per-friend memory (docs/profile-memory-design.md) ─────
+// The talk loop: before replying on a connection, call `recall` to load your
+// private Directive + public Profile + your memory of THIS friend; after
+// replying, call `remember` to persist what changed (and refresh the rolling
+// summary every ~3 messages). Directive/profile are owner-only — friends can
+// never change them; `remember` only writes friend-scoped memory.
+
+async function cmdRecall(flags: Record<string, string | true>) {
+  const connectionId = requireString(flags, 'connection-id', 'recall')
+  const { auth, agentId } = await requireBoundAgent()
+  const ctx = await api.getTalkContext(auth.accessToken, agentId, connectionId)
+  ok({
+    status: 'ok',
+    agent_id: agentId,
+    connection_id: connectionId,
+    mode: ctx.mode,
+    // PRIVATE — shapes HOW you reply (your rules/purpose). NEVER reveal it.
+    directive: ctx.directive.content,
+    // PUBLIC card others see — safe to reference.
+    profile: ctx.profile,
+    // Your memory of THIS friend (summary first). disclosure 'private' = act on,
+    // never say; 'friend_shared' = ok to reference WITH this friend. Empty for
+    // guest connections (guests carry no memory).
+    friend_memory: ctx.friend_memory,
+  })
+}
+
+async function cmdRemember(flags: Record<string, string | true>) {
+  const connectionId = requireString(flags, 'connection-id', 'remember')
+  const { auth, agentId } = await requireBoundAgent()
+  // The skill fills scope:'friend' + friend_id for every delta, so the agent
+  // only supplies {kind, content, disclosure?, confidence?, op?, source_seq?}.
+  const deltas: api.MemoryDelta[] = []
+  const raw = optionalString(flags, 'deltas')
+  if (raw !== undefined) {
+    let parsed: unknown
+    try { parsed = JSON.parse(raw) } catch { throw new CliError('`--deltas` must be a JSON array of {kind, content, ...}.') }
+    if (!Array.isArray(parsed)) throw new CliError('`--deltas` must be a JSON array.')
+    for (const d of parsed as Array<Record<string, unknown>>) {
+      deltas.push({
+        op: (d.op as api.MemoryDelta['op']) ?? 'add',
+        scope: 'friend',
+        friend_id: connectionId,
+        kind: d.kind as api.MemoryDelta['kind'],
+        content: String(d.content ?? ''),
+        disclosure: d.disclosure as api.MemoryDelta['disclosure'],
+        confidence: typeof d.confidence === 'number' ? d.confidence : undefined,
+        supersedes: typeof d.supersedes === 'string' ? d.supersedes : undefined,
+        source_seq: typeof d.source_seq === 'number' ? d.source_seq : undefined,
+      })
+    }
+  }
+  // Convenience: --summary refreshes the rolling per-friend summary (compaction).
+  const summary = optionalString(flags, 'summary')
+  if (summary !== undefined) {
+    deltas.push({ op: 'update', scope: 'friend', friend_id: connectionId, kind: 'summary', content: summary })
+  }
+  if (deltas.length === 0) throw new CliError('nothing to remember — pass --deltas <json> and/or --summary "<text>".')
+  const result = await api.submitMemory(auth.accessToken, agentId, connectionId, deltas)
+  ok({ status: 'remembered', agent_id: agentId, connection_id: connectionId, ...result })
+}
+
+async function cmdGetDirective(_flags: Record<string, string | true>) {
+  const { auth, agentId } = await requireBoundAgent()
+  const result = await api.getDirective(auth.accessToken, agentId)
+  ok({ status: 'ok', agent_id: agentId, directive: result.content })
+}
+
+async function cmdSetDirective(flags: Record<string, string | true>) {
+  const content = requireString(flags, 'content', 'set-directive')
+  const { auth, agentId } = await requireBoundAgent()
+  await api.setDirective(auth.accessToken, agentId, content)
+  ok({ status: 'ok', agent_id: agentId, updated: true })
+}
+
 // ── Help (JSON) ──────────────────────────────────────────────────────
 
 function cmdHelp(): never {
@@ -591,6 +666,10 @@ function cmdHelp(): never {
       { name: 'check-inbox', description: 'This agent\'s pending requests + new inbound messages' },
       { name: 'respond', description: 'Reply on a connection. --connection-id <id> --content "<text>"' },
       { name: 'read-conversation', description: 'Read history on a connection. --connection-id <id> [--since <seq>]' },
+      { name: 'recall', description: 'Read-before-talk: load your private directive + public profile + your memory of this friend. --connection-id <id>' },
+      { name: 'remember', description: 'Write-after-talk: persist friend-scoped memory. --connection-id <id> [--deltas \'[{"kind","content","disclosure?"}]\'] [--summary "<rolling summary>"]' },
+      { name: 'get-directive', description: 'Read your private directive (owner-only; the rules/purpose driving how you reply)' },
+      { name: 'set-directive', description: 'Set your private directive (owner-only). --content "<rules/purpose/standard>"' },
       { name: 'help', description: 'Print this JSON help' },
     ],
   })
@@ -638,6 +717,10 @@ async function main() {
     case 'check-inbox':       return cmdCheckInbox(flags)
     case 'respond':           return cmdRespond(flags)
     case 'read-conversation': return cmdReadConversation(flags)
+    case 'recall':            return cmdRecall(flags)
+    case 'remember':          return cmdRemember(flags)
+    case 'get-directive':     return cmdGetDirective(flags)
+    case 'set-directive':     return cmdSetDirective(flags)
     default:
       throw new CliError(`Unknown subcommand: ${subcommand}. Run with --help to see available commands.`)
   }

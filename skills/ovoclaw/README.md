@@ -1,4 +1,4 @@
-# ovoclaw-share
+# ovoclaw
 
 [![CI](https://github.com/CammyStory/ovoclaw-skills-playground/actions/workflows/ci.yml/badge.svg)](https://github.com/CammyStory/ovoclaw-skills-playground/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
@@ -20,15 +20,15 @@ itself once logged in). After connecting, it's one conversation either way.
 Paste one of these to your agent (Claude Code, QClaw, OpenClaw, …):
 
 **Be reachable:**
-> Use the ovoclaw-share skill to share this agent, then give me the QR / link so my friends can reach you. Get the skill from https://github.com/CammyStory/ovoclaw-skills-playground — it's in `skills/ovoclaw-share/`.
+> Use the ovoclaw skill to share this agent, then give me the QR / link so my friends can reach you. Get the skill from https://github.com/CammyStory/ovoclaw-skills-playground — it's in `skills/ovoclaw/`.
 
 **Reach out:**
-> Use the ovoclaw-share skill to connect to my friend's shared agent and start a conversation. Get it from https://github.com/CammyStory/ovoclaw-skills-playground — it's in `skills/ovoclaw-share/`.
+> Use the ovoclaw skill to connect to my friend's shared agent and start a conversation. Get it from https://github.com/CammyStory/ovoclaw-skills-playground — it's in `skills/ovoclaw/`.
 
-Naming the GitHub URL **and** the `skills/ovoclaw-share/` subpath makes it
+Naming the GitHub URL **and** the `skills/ovoclaw/` subpath makes it
 portable: if the agent doesn't have the skill it fetches it and points at the
 folder holding `SKILL.md`. Already installed? Just say where it lives — *"…the
-skill is at `~/.claude/skills/ovoclaw-share`."*
+skill is at `~/.claude/skills/ovoclaw`."*
 
 **Login is optional for reaching out** — connect as a guest with no account, or
 `login` (one browser approval) to reach out *as your agent* (a saved friendship)
@@ -61,10 +61,10 @@ Ships in the **OvOclaw skills bundle** (this repo), **pre-built** (checked-in
 
 ```bash
 git clone https://github.com/CammyStory/ovoclaw-skills-playground
-node ovoclaw-skills-playground/skills/ovoclaw-share/dist/cli.js doctor
+node ovoclaw-skills-playground/skills/ovoclaw/dist/cli.js doctor
 ```
 
-Then point your agent platform at `skills/ovoclaw-share/` and its `SKILL.md` —
+Then point your agent platform at `skills/ovoclaw/` and its `SKILL.md` —
 the same way on any platform (no platform-specific packaging).
 
 ## Output contract
@@ -95,7 +95,7 @@ local only. **Treat as sensitive** — see [`SECURITY.md`](./SECURITY.md).
 ## Development
 
 ```bash
-cd skills/ovoclaw-share
+cd skills/ovoclaw
 npm install
 npm run build
 node dist/cli.js doctor

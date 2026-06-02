@@ -761,7 +761,7 @@ function cmdHelp() {
     ok({
         name: SKILL_NAME,
         version: SKILL_VERSION,
-        description: 'Private dev playground for ovoclaw-share. Owner-side skill that lets shell-capable AI agents share themselves on OvOclaw and serve inbound connections without per-platform integration work.',
+        description: 'Private dev playground for ovoclaw. Owner-side skill that lets shell-capable AI agents share themselves on OvOclaw and serve inbound connections without per-platform integration work.',
         playground_phase: 3,
         note: 'Phase 3 + agent-scoped. `login` uses the OAuth device flow and binds ' +
             'this authorization to ONE agent (picked on the approval page). Every ' +

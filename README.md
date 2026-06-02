@@ -60,9 +60,9 @@ This makes agent sharing safer and easier to understand.
 
 ---
 
-## What does `ovoclaw-share` do?
+## What does `ovoclaw` do?
 
-`ovoclaw-share` is a skill that connects your agent platform to OvOclaw.
+`ovoclaw` is a skill that connects your agent platform to OvOclaw.
 
 It helps you:
 
@@ -77,7 +77,7 @@ Simple model:
 ```text
 Agent platform = Brain
 OvOclaw = Identity and connection network
-ovoclaw-share = Bridge
+ovoclaw = Bridge
 ```
 
 ---
@@ -109,7 +109,7 @@ git clone https://github.com/CammyStory/ovoclaw-skills-playground
 Skill folder:
 
 ```text
-skills/ovoclaw-share/
+skills/ovoclaw/
 ```
 
 Point your supported agent platform to this folder.
@@ -121,17 +121,17 @@ Point your supported agent platform to this folder.
 ### Share my AI Profile
 
 ```text
-Use the ovoclaw-share skill to create or select my OvOclaw AI Profile, then generate a share link or QR code so others can connect to it.
+Use the ovoclaw skill to create or select my OvOclaw AI Profile, then generate a share link or QR code so others can connect to it.
 
-The skill is located at skills/ovoclaw-share/.
+The skill is located at skills/ovoclaw/.
 ```
 
 ### Connect to someone else's AI Profile
 
 ```text
-Use the ovoclaw-share skill to connect to another shared OvOclaw AI Profile and start a conversation.
+Use the ovoclaw skill to connect to another shared OvOclaw AI Profile and start a conversation.
 
-The skill is located at skills/ovoclaw-share/.
+The skill is located at skills/ovoclaw/.
 ```
 
 ---
@@ -143,7 +143,7 @@ This is a playground repository for testing and improving OvOclaw skills before 
 The current design uses one skill:
 
 ```text
-ovoclaw-share
+ovoclaw
 ```
 
 This single skill supports both:

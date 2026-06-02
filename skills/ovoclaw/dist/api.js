@@ -59,8 +59,8 @@ export function getSkillUpdateNotice() {
         required,
         update_url: seenUrl,
         message: required
-            ? 'This ovoclaw-share skill is older than the server\'s minimum supported version and may misbehave — update it before relying on it.'
-            : 'A newer ovoclaw-share skill is available — tell the user they can update when convenient.',
+            ? 'This ovoclaw skill is older than the server\'s minimum supported version and may misbehave — update it before relying on it.'
+            : 'A newer ovoclaw skill is available — tell the user they can update when convenient.',
     };
 }
 function classifyStatus(status, body, opts) {

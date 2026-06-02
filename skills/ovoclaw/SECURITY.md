@@ -2,7 +2,7 @@
 
 ## What this skill stores locally
 
-`ovoclaw-share` persists owner authentication at:
+`ovoclaw` persists owner authentication at:
 
 ```
 ~/.ovoclaw-share/auth.json   (file mode 0600)
@@ -39,7 +39,7 @@ minting access tokens.
 1. **Immediately run `logout`** to delete the local file:
 
    ```bash
-   node ~/.claude/skills/ovoclaw-share/dist/cli.js logout
+   node ~/.claude/skills/ovoclaw/dist/cli.js logout
    ```
 
    This removes the local record but does NOT revoke the token on the
@@ -93,7 +93,7 @@ models the skill is designed to respect:
 ## Reporting a vulnerability
 
 If you believe you've found a security vulnerability in
-`ovoclaw-share`, please report it privately rather than
+`ovoclaw`, please report it privately rather than
 opening a public issue.
 
 - **Contact**: Open a GitHub security advisory at
@@ -111,5 +111,5 @@ Please do not publicly disclose details until a fix is available.
 
 This is early-stage (v0.x). Only the **latest minor
 version** receives security updates. The polished public release will
-live at `CammyStory/ovoclaw-share` once phases 2–4 complete; consume
+live at `CammyStory/ovoclaw` once phases 2–4 complete; consume
 that for any production use.

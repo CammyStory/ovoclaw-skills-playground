@@ -1,12 +1,12 @@
 {
-  "name": "ovoclaw-share",
+  "name": "ovoclaw",
   "version": "0.9.23",
   "description": "OvOclaw skill — one agent, both directions: be reached by others and reach out to others (publish/QR, connect to others as guest or as your agent, then send/read/check messages).",
   "license": "MIT",
   "type": "module",
   "main": "dist/cli.js",
   "bin": {
-    "ovoclaw-share": "dist/cli.js"
+    "ovoclaw": "dist/cli.js"
   },
   "files": [
     "dist",

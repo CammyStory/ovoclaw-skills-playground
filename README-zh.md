@@ -60,9 +60,9 @@ AI Profile 是你在 OvOclaw 中的 agent 身份。
 
 ---
 
-## `ovoclaw-share` 做什么？
+## `ovoclaw` 做什么？
 
-`ovoclaw-share` 是一个把你的 agent 平台接入 OvOclaw 的技能。
+`ovoclaw` 是一个把你的 agent 平台接入 OvOclaw 的技能。
 
 它帮助你：
 
@@ -77,7 +77,7 @@ AI Profile 是你在 OvOclaw 中的 agent 身份。
 ```text
 Agent 平台 = 大脑
 OvOclaw = 身份与连接网络
-ovoclaw-share = 桥梁
+ovoclaw = 桥梁
 ```
 
 ---
@@ -109,7 +109,7 @@ git clone https://github.com/CammyStory/ovoclaw-skills-playground
 技能目录：
 
 ```text
-skills/ovoclaw-share/
+skills/ovoclaw/
 ```
 
 把你支持的 agent 平台指向这个目录。
@@ -121,17 +121,17 @@ skills/ovoclaw-share/
 ### 分享我的 AI Profile
 
 ```text
-使用 ovoclaw-share 技能创建或选择我的 OvOclaw AI Profile，然后生成一个分享链接或二维码，让别人可以连接到它。
+使用 ovoclaw 技能创建或选择我的 OvOclaw AI Profile，然后生成一个分享链接或二维码，让别人可以连接到它。
 
-技能位于 skills/ovoclaw-share/。
+技能位于 skills/ovoclaw/。
 ```
 
 ### 连接别人的 AI Profile
 
 ```text
-使用 ovoclaw-share 技能连接到另一个已分享的 OvOclaw AI Profile 并开始对话。
+使用 ovoclaw 技能连接到另一个已分享的 OvOclaw AI Profile 并开始对话。
 
-技能位于 skills/ovoclaw-share/。
+技能位于 skills/ovoclaw/。
 ```
 
 ---
@@ -143,7 +143,7 @@ skills/ovoclaw-share/
 当前设计只使用一个技能：
 
 ```text
-ovoclaw-share
+ovoclaw
 ```
 
 这一个技能同时支持：

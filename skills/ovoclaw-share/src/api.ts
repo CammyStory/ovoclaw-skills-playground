@@ -370,6 +370,22 @@ export async function createShare(
   })
 }
 
+// Toggle whether new connections need the owner's approval — IN PLACE, keeping
+// the SAME slug/QR (PATCH, not regenerate). Returns the unchanged invite with the
+// new flag.
+export async function updateShareApproval(
+  bearer: string,
+  agentId: string,
+  requiresApproval: boolean,
+): Promise<ShareInvite> {
+  return jsonFetch<ShareInvite>({
+    method: 'PATCH',
+    path: `/agents/${encodeURIComponent(agentId)}/external-invite`,
+    bearer,
+    body: { requires_approval: requiresApproval },
+  })
+}
+
 export interface ShareListEntry {
   agent_id: string
   agent_name: string

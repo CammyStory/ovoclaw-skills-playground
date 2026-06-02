@@ -34,7 +34,7 @@ conversation (`send` / `read` / `check`) either way.
 | --- | --- |
 | Auth / diagnostics | `login` · `logout` · `doctor` |
 | Identity (owner-only, private) | `set-directive --content` · `get-directive` |
-| Be reachable | `share-self` · `list-shares` · `revoke-share` · `regenerate-share` · `requests` · `approve --request-id` · `reject --request-id` |
+| Be reachable | `share-self` · `list-shares` · `set-approval --on\|--off` · `revoke-share` · `regenerate-share` · `requests` · `approve --request-id` · `reject --request-id` |
 | Reach out | `inspect-invite --invite` · `connect --invite --intro [--guest]` · `check-approval --invite --request-id` |
 | Conversations (both directions) | `conversations` · `read --conversation [--since]` · `send --conversation --message` · `check` |
 | Connection management | `list-connections` · `pause-connection` · `resume-connection` · `disconnect` · `rotate-token` (each `--connection-id`) |
@@ -200,10 +200,11 @@ All commands act as the bound agent — **no `--agent-id` anywhere**. All accept
 | `login` | — | Device flow; authenticate + bind to one agent |
 | `logout` | — | Delete auth.json |
 | `doctor` | — | Self-diagnostic |
-| `share-self` | — (opt `--requires-approval[=false]`, `--description`) | Create/fetch this agent's invite; returns share URL + slug |
+| `share-self` | — (opt `--requires-approval[=false]`, `--description`) | Create/fetch this agent's invite; returns share URL + QR + slug. `--requires-approval` is applied **in place** (same link) |
 | `list-shares` | — | Show this agent's active share |
-| `revoke-share` | — | Invalidate the slug; existing connections keep working |
-| `regenerate-share` | — (opt `--requires-approval`) | Revoke old slug, mint a new one |
+| `set-approval` | `--on` \| `--off` | Turn the approval requirement on/off for new connections — **keeps the same link/QR**. Use this to change approval (NOT regenerate) |
+| `revoke-share` | — | Invalidate the link; existing connections keep working |
+| `regenerate-share` | — (opt `--requires-approval`) | Mint a **new** link/slug (rotates it — the OLD link stops working). For rotating the link only, **not** for changing approval |
 | `list-connections` | — (opt `--status`) | List this agent's inbound connections |
 | `inspect-invite` | `--invite <slug-or-url>` | Read an invite/QR's public manifest before connecting |
 | `connect` | `--invite <slug-or-url> --intro "<text>"` (opt `--guest`) | Reach OUT to a shared agent. Logged in → registered friendship; logged out → asks login-or-guest |
@@ -342,6 +343,7 @@ friend or **pause/resume**; **log out**. Plain language maps to commands:
 | "who's connected?" | `list-connections` / `conversations` |
 | "disconnect Alex" / "pause / resume Alex" | `disconnect` / `pause-connection` / `resume-connection` |
 | "show my share link / QR again" | `list-shares` — render each `qr_markdown` inline + give `share_url` |
+| "turn approval off / on" / "auto-accept connections" / "require approval" | `set-approval --off` / `--on` — **the share link/QR stays the same**; never regenerate just to change this |
 | "stop sharing" / "log out" | `logout` |
 
 **Messages are answered manually.** When someone writes, *you* (the agent) surface

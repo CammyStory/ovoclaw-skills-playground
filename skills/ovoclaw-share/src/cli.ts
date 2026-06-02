@@ -410,7 +410,13 @@ async function cmdShareSelf(flags: Record<string, string | true>) {
   optionalString(flags, 'description') // accepted for forward-compat; not used by the invite endpoint
   const requiresApproval = parseRequiresApproval(flags)
   const { auth, agentId } = await requireBoundAgent()
-  const invite = await api.createShare(auth.accessToken, agentId, { requires_approval: requiresApproval })
+  let invite = await api.createShare(auth.accessToken, agentId, { requires_approval: requiresApproval })
+  // createShare is idempotent and IGNORES requires_approval on an EXISTING invite.
+  // So if the owner asked for a specific setting and it differs, apply it IN PLACE
+  // (PATCH) — keeps the SAME slug/QR. (Changing approval must never rotate the link.)
+  if (requiresApproval !== undefined && invite.requires_approval !== requiresApproval) {
+    invite = await api.updateShareApproval(auth.accessToken, agentId, requiresApproval)
+  }
   ok({
     status: 'shared',
     agent_id: agentId,
@@ -449,6 +455,32 @@ async function cmdRevokeShare() {
   const { auth, agentId } = await requireBoundAgent()
   const result = await api.revokeShare(auth.accessToken, agentId)
   ok({ status: 'revoked', agent_id: agentId, ...result })
+}
+
+// Toggle whether NEW connections need the owner's approval. Changes the setting
+// IN PLACE — the existing share link/QR is UNCHANGED (never regenerate the slug
+// just to flip this). --on = require approval, --off = auto-accept.
+async function cmdSetApproval(flags: Record<string, string | true>) {
+  const truthy = (v: unknown) => v === true || v === 'true' || v === ''
+  let requiresApproval: boolean | undefined
+  if (truthy(flags['off'])) requiresApproval = false
+  else if (truthy(flags['on'])) requiresApproval = true
+  else requiresApproval = parseRequiresApproval(flags) // tri-state --requires-approval[=false]
+  if (requiresApproval === undefined) {
+    throw new CliError(
+      'set-approval needs --on (require your approval before someone connects) or --off (auto-accept). Either way your share link/QR is unchanged.',
+    )
+  }
+  const { auth, agentId } = await requireBoundAgent()
+  const invite = await api.updateShareApproval(auth.accessToken, agentId, requiresApproval)
+  ok({
+    status: 'approval_updated',
+    agent_id: agentId,
+    requires_approval: invite.requires_approval,
+    slug: invite.slug,
+    share_url: shareUrlFor(invite.slug),
+    note: 'Your existing share LINK and QR are UNCHANGED — only whether new connections need your approval changed. Do NOT regenerate or re-share the link; the same one still works.',
+  })
 }
 
 async function cmdRegenerateShare(flags: Record<string, string | true>) {
@@ -793,10 +825,11 @@ function cmdHelp(): never {
       { name: 'login', description: 'OAuth device flow — authenticate + bind to one agent. Optional: --agent <name-or-id> to pre-select an existing OvOclaw agent so the approval page auto-confirms it' },
       { name: 'logout', description: 'Delete local auth.json' },
       { name: 'doctor', description: 'Self-diagnostic: Node, state dir, auth file, API reachability' },
-      { name: 'share-self', description: 'Share this agent (creates an external invite). Optional: --requires-approval[=false]' },
+      { name: 'share-self', description: 'Share this agent (creates/returns its invite + QR). Optional --requires-approval[=false] is applied in place, keeping the same link' },
       { name: 'list-shares', description: 'Show this agent\'s active share' },
-      { name: 'revoke-share', description: 'Revoke this agent\'s share (invalidates the slug)' },
-      { name: 'regenerate-share', description: 'Mint a new slug for this agent\'s share' },
+      { name: 'set-approval', description: 'Turn the approval requirement on/off for new connections — KEEPS the same link/QR. --on (require approval) | --off (auto-accept). Use this to change approval; do NOT regenerate' },
+      { name: 'revoke-share', description: 'Revoke this agent\'s share (invalidates the link)' },
+      { name: 'regenerate-share', description: 'Mint a NEW link/slug (rotates it; OLD link stops working). Only for rotating the link — NOT for changing approval (use set-approval)' },
       { name: 'list-connections', description: 'List this agent\'s inbound connections. Optional: --status' },
       { name: 'pause-connection', description: 'Pause a connection. --connection-id <id>' },
       { name: 'resume-connection', description: 'Resume a paused connection. --connection-id <id>' },
@@ -854,6 +887,7 @@ async function main() {
     case 'share-self':        return cmdShareSelf(flags)
     case 'list-shares':       return cmdListShares()
     case 'revoke-share':      return cmdRevokeShare()
+    case 'set-approval':      return cmdSetApproval(flags)
     case 'regenerate-share':  return cmdRegenerateShare(flags)
     case 'list-connections':  return cmdListConnections(flags)
     case 'pause-connection':  return cmdPauseConnection(flags)

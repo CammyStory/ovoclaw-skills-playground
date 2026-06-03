@@ -17,6 +17,9 @@ import {
   clearAuth,
   loadBoundAgent,
   saveBoundAgent,
+  savePendingLogin,
+  loadPendingLogin,
+  clearPendingLogin,
   isAuthFileWriteable,
   saveSession,
   getSession,
@@ -240,18 +243,30 @@ async function cmdDoctor() {
   process.exit(1)
 }
 
+// Two-step login. `login` (initiate) requests a device code, stashes it, and
+// returns the approval URL immediately — it does NOT poll. `login --finish`,
+// run ONLY after the user says they approved, polls once and saves the token.
+// This deliberately removes the old blocking poll loop so the agent never
+// silently re-drives login (the cause of the re-login loop on hosts without a
+// stable state folder).
+function wantsFinish(flags: Record<string, string | true>): boolean {
+  const v = flags['finish']
+  return v === true || v === 'true' || v === ''
+}
+
 async function cmdLogin(flags: Record<string, string | true>) {
-  // Device flow: request a device_code, surface the verification URL to the
-  // user, then poll until they approve. The server-side /oauth/* endpoints
-  // landed in phase 2; if a deployment predates them this still degrades
-  // cleanly to code:server_not_ready.
+  if (wantsFinish(flags)) return cmdLoginFinish(flags)
+
+  // ── Step 1: initiate. Request a device_code, surface the verification URL to
+  // the user, stash the code, and STOP. The server-side /oauth/* endpoints
+  // landed in phase 2; if a deployment predates them this degrades cleanly to
+  // code:server_not_ready.
   //
   // Agent pre-select hint, in priority order:
-  //   1. --agent <name-or-id> — the owner told us which agent to share (ask
-  //      them before login when they already have one on OvOclaw). The approval
-  //      page resolves it by id or unique name and auto-selects that agent.
-  //   2. the agent we bound to on a prior share (agent.json) — so every
-  //      re-login re-binds the same identity without re-choosing.
+  //   1. --agent <name-or-id> — the owner told us which agent to share. The
+  //      approval page resolves it by id or unique name and auto-selects it.
+  //   2. the agent we bound to on a prior login (agent.json) — so every re-login
+  //      re-binds the same identity without re-choosing.
   // Either way it's only a hint: an unknown/ambiguous value is ignored
   // server-side and the page falls back to the pick-or-create chooser.
   const explicitAgent = optionalString(flags, 'agent')
@@ -271,124 +286,141 @@ async function cmdLogin(flags: Record<string, string | true>) {
     throw e
   }
 
-  // Show the user the verification link. Prefer verification_uri_complete —
-  // opening it pre-fills the code automatically, so the user clicks once and
-  // never types anything. verification_uri + user_code are the manual
-  // fallback (e.g. approving on a different device).
-  process.stdout.write(
-    JSON.stringify(
-      {
-        status: 'awaiting_user_approval',
-        verification_uri_complete: codeResp.verification_uri_complete,
-        verification_uri: codeResp.verification_uri,
-        user_code: codeResp.user_code,
-        expires_in_seconds: codeResp.expires_in,
-        message:
-          'Show the user verification_uri_complete and tell them to click it — the code is pre-filled, no manual entry. ' +
-          '(Fallback: open verification_uri and enter user_code.) On that page they sign IN — or, if they have no OvOclaw account yet, SIGN UP right there (a new account creates an agent automatically) — then pick which agent to share and approve. ' +
-          'The CLI keeps polling and continues automatically once approved.',
-      },
-      null,
-      2,
-    ) + '\n',
-  )
+  // Persist the device code in this agent's state dir so `login --finish` can
+  // poll it from a separate process.
+  await savePendingLogin({
+    deviceCode: codeResp.device_code,
+    interval: codeResp.interval,
+    expiresAt: new Date(Date.now() + codeResp.expires_in * 1000).toISOString(),
+    agentHint,
+    startedAt: new Date().toISOString(),
+  })
 
-  // Poll for token. Sleep `interval` between attempts. Stop after expires_in.
-  const expiresAt = Date.now() + codeResp.expires_in * 1000
-  let interval = codeResp.interval * 1000
-  while (Date.now() < expiresAt) {
-    await new Promise((r) => setTimeout(r, interval))
-    try {
-      const token = await api.pollDeviceToken(codeResp.device_code)
-      const auth: AuthState = {
-        accessToken: token.access_token,
-        tokenType: token.token_type,
-        expiresAt: new Date(Date.now() + token.expires_in * 1000).toISOString(),
-        refreshToken: token.refresh_token,
-        scope: token.scope,
-        ovoclawAccountId: token.account_id,
-        agentId: token.agent_id ?? undefined,
-        loggedInAt: new Date().toISOString(),
-      }
-      await saveAuth(auth)
-      const agentName = token.agent_name ?? undefined
-      // Remember which agent this login bound to, so the next `login` hints it
-      // and auto-confirms the same identity. Survives logout / token expiry.
-      // We keep the name too — purely so a future session can show it.
-      if (auth.agentId) {
-        await saveBoundAgent({
-          agentId: auth.agentId,
-          agentName,
-          boundAt: new Date().toISOString(),
-        })
-      }
-      // First-run onboarding: load the agent's profile + directive so we can show
-      // the owner everything and tell a NEW agent (help set it up) from an
-      // EXISTING one (offer to update). Best-effort — never block login on it.
-      let prof: api.AgentProfile | null = null
-      try {
-        if (auth.agentId) prof = await api.getAgentProfile(auth.accessToken, auth.agentId)
-      } catch { /* ignore */ }
-      // Tell the agent which OvOclaw agent it's now bound to AND ask it to
-      // remember — so on a fresh install (where the local agent.json may not
-      // survive) it can recall this from its own memory and pass it as
-      // `--agent` next login, re-binding the same identity without a picker.
-      const rememberLabel = agentName ?? auth.agentId
-      // Which isolated folder this login lives in — so multi-agent platforms can
-      // confirm each agent got its OWN binding and isn't sharing one login.
-      const binding = await ensureAgentBinding(false)
-      ok({
-        status: 'authenticated',
-        scope: auth.scope,
-        expires_at: auth.expiresAt,
-        account_id: auth.ovoclawAccountId,
-        agent_id: auth.agentId,
-        agent_name: agentName ?? null,
-        note: 'This login is bound to a single agent. All commands act as that agent only.',
-        // This agent's private state folder + how it was resolved. On a platform
-        // running multiple agents, each MUST show a distinct key/folder.
-        state_binding: { key: binding.key || null, source: binding.source, binding_file: binding.binding_file, state_dir: binding.state_dir },
-        // SHOW the owner this profile + directive, then follow `next_step`.
-        profile: prof ? { name: prof.name, description: prof.description, avatar_url: prof.avatar_url } : null,
-        directive: prof ? prof.directive : '',
-        agent_is_new: prof ? prof.is_new : false,
-        setup: prof
-          ? (prof.is_new
-              ? { state: 'new', guidance: 'This agent has NO public profile description and NO private directive yet. Before sharing, help the owner SET IT UP so it represents them well to others.' }
-              : { state: 'existing', profile_complete: prof.profile_complete, directive_set: prof.directive_set, guidance: 'This agent already has a profile and/or directive (shown above). Show them to the owner and ASK whether to update either.' })
-          : null,
-        next_step: prof
-          ? (prof.is_new
-              ? 'STEP 1 — design this agent (before sharing): tell the owner it has no profile/directive yet, then help them write (a) the PUBLIC profile `set-profile --description "…"` (who they are + what the agent may discuss — others read this) and (b) the PRIVATE `set-directive --content "…"` (rules/purpose + what to never reveal). STEP 2 — when they are happy, run `share-self` for the QR/link.'
-              : 'STEP 1 — show the owner the current `profile` + `directive` above and ASK if they want to update either: `set-profile --description "…"` and/or `set-directive --content "…"` (each keeps everything else). STEP 2 — when done, run `share-self` for the QR/link.')
-          : 'Show the owner this agent and ask how they want to set it up, then `share-self`.',
-        // Suggested wording to relay to the human owner at this step.
-        tell_owner: prof
-          ? (prof.is_new
-              ? "Before I put you on OvOclaw, let's set you up: a short public description (who you are + what I can talk about) and your private rules for how I should act. Want to do that now?"
-              : "Here's how you're currently set up on OvOclaw — want to update your profile or rules before I share you, or keep them as they are?")
-          : undefined,
-        remember: rememberLabel
-          ? `You are now sharing the OvOclaw agent "${rememberLabel}" (id ${auth.agentId}). ` +
-            `Record this in your durable memory as your OvOclaw agent. Next time you log in, ` +
-            `pass it as \`login --agent "${rememberLabel}"\` to re-bind the same agent without the picker.`
-          : undefined,
-      })
-    } catch (e) {
-      const apiErr = e as api.ApiError
-      if (apiErr.code === 'authorization_pending') continue
-      if (apiErr.code === 'slow_down') {
-        interval = Math.round(interval * 1.5)
-        continue
-      }
-      throw e
-    }
+  // Show the user the verification link. Prefer verification_uri_complete —
+  // opening it pre-fills the code, so the user clicks once and never types.
+  // verification_uri + user_code are the manual fallback (different device).
+  ok({
+    status: 'awaiting_user_approval',
+    verification_uri_complete: codeResp.verification_uri_complete,
+    verification_uri: codeResp.verification_uri,
+    user_code: codeResp.user_code,
+    expires_in_seconds: codeResp.expires_in,
+    message:
+      'Show the user verification_uri_complete and tell them to click it — the code is pre-filled, no manual entry. ' +
+      '(Fallback: open verification_uri and enter user_code.) On that page they sign IN — or, if they have no OvOclaw account yet, SIGN UP right there (a new account creates an agent automatically) — then pick which agent to share and approve.',
+    // The whole point of the two-step flow: do NOT poll, do NOT re-run `login`.
+    next_step:
+      'WAIT for the USER to tell you they finished approving on the page. ONLY THEN run `login --finish` once to complete it. ' +
+      'Do NOT poll, and do NOT re-run `login` on your own — if `login --finish` says still-pending, ask the user again and run `login --finish` only after they confirm.',
+    tell_owner:
+      "Open this link and approve the login (sign in, or sign up if you don't have an account yet). Tell me once you've done it and I'll finish connecting you.",
+  })
+}
+
+async function cmdLoginFinish(_flags: Record<string, string | true>) {
+  const pending = await loadPendingLogin()
+  if (!pending) {
+    throw new CliError(
+      'no login in progress. Run `login` first to get the approval link, then `login --finish` after the user approves.',
+    )
+  }
+  if (Date.now() >= new Date(pending.expiresAt).getTime()) {
+    await clearPendingLogin()
+    throw api.makeApiError(
+      'expired_token',
+      'the approval link expired before it was finished. Run `login` again to get a fresh link.',
+    )
   }
 
-  throw api.makeApiError(
-    'expired_token',
-    'device authorization expired before approval. Run `login` again.',
-  )
+  let token: api.DeviceTokenResponse
+  try {
+    token = await api.pollDeviceToken(pending.deviceCode)
+  } catch (e) {
+    const code = (e as api.ApiError).code
+    if (code === 'authorization_pending' || code === 'slow_down') {
+      // Not approved yet. Return a SUCCESS (exit 0) so the agent doesn't treat
+      // it as a failure and loop — it should just wait for the user.
+      ok({
+        status: 'awaiting_user_approval',
+        pending: true,
+        message: 'The user has not finished approving on the login page yet.',
+        next_step:
+          'Ask the user to complete the approval on the login page (sign in / sign up, pick the agent, approve). ' +
+          'Once they CONFIRM they have, run `login --finish` again. Do not loop on your own.',
+        tell_owner:
+          "It looks like the login page isn't approved yet — finish signing in and approving there, then tell me and I'll complete it.",
+      })
+    }
+    if (code === 'access_denied') {
+      await clearPendingLogin()
+      throw api.makeApiError('access_denied', 'the login was denied on the approval page. Run `login` again if that was a mistake.')
+    }
+    if (code === 'expired_token') {
+      await clearPendingLogin()
+      throw api.makeApiError('expired_token', 'the approval link expired. Run `login` again for a fresh one.')
+    }
+    throw e
+  }
+
+  // Approved — persist the token, clear the pending code, then onboard.
+  const auth: AuthState = {
+    accessToken: token.access_token,
+    tokenType: token.token_type,
+    expiresAt: new Date(Date.now() + token.expires_in * 1000).toISOString(),
+    refreshToken: token.refresh_token,
+    scope: token.scope,
+    ovoclawAccountId: token.account_id,
+    agentId: token.agent_id ?? undefined,
+    loggedInAt: new Date().toISOString(),
+  }
+  await saveAuth(auth)
+  await clearPendingLogin()
+  const agentName = token.agent_name ?? undefined
+  // Remember which agent this login bound to, so the next `login` hints it and
+  // auto-confirms the same identity. Survives logout / token expiry.
+  if (auth.agentId) {
+    await saveBoundAgent({ agentId: auth.agentId, agentName, boundAt: new Date().toISOString() })
+  }
+  // First-run onboarding: load the agent's profile + directive (best-effort).
+  let prof: api.AgentProfile | null = null
+  try {
+    if (auth.agentId) prof = await api.getAgentProfile(auth.accessToken, auth.agentId)
+  } catch { /* ignore */ }
+  const rememberLabel = agentName ?? auth.agentId
+  const binding = await ensureAgentBinding(false)
+  ok({
+    status: 'authenticated',
+    scope: auth.scope,
+    expires_at: auth.expiresAt,
+    account_id: auth.ovoclawAccountId,
+    agent_id: auth.agentId,
+    agent_name: agentName ?? null,
+    note: 'This login is bound to a single agent. All commands act as that agent only.',
+    state_binding: { key: binding.key || null, source: binding.source, binding_file: binding.binding_file, state_dir: binding.state_dir },
+    profile: prof ? { name: prof.name, description: prof.description, avatar_url: prof.avatar_url } : null,
+    directive: prof ? prof.directive : '',
+    agent_is_new: prof ? prof.is_new : false,
+    setup: prof
+      ? (prof.is_new
+          ? { state: 'new', guidance: 'This agent has NO public profile description and NO private directive yet. Before sharing, help the owner SET IT UP so it represents them well to others.' }
+          : { state: 'existing', profile_complete: prof.profile_complete, directive_set: prof.directive_set, guidance: 'This agent already has a profile and/or directive (shown above). Show them to the owner and ASK whether to update either.' })
+      : null,
+    next_step: prof
+      ? (prof.is_new
+          ? 'STEP 1 — design this agent (before sharing): tell the owner it has no profile/directive yet, then help them write (a) the PUBLIC profile `set-profile --description "…"` (who they are + what the agent may discuss — others read this) and (b) the PRIVATE `set-directive --content "…"` (rules/purpose + what to never reveal). STEP 2 — when they are happy, run `share-self` for the QR/link.'
+          : 'STEP 1 — show the owner the current `profile` + `directive` above and ASK if they want to update either: `set-profile --description "…"` and/or `set-directive --content "…"` (each keeps everything else). STEP 2 — when done, run `share-self` for the QR/link.')
+      : 'Show the owner this agent and ask how they want to set it up, then `share-self`.',
+    tell_owner: prof
+      ? (prof.is_new
+          ? "Before I put you on OvOclaw, let's set you up: a short public description (who you are + what I can talk about) and your private rules for how I should act. Want to do that now?"
+          : "Here's how you're currently set up on OvOclaw — want to update your profile or rules before I share you, or keep them as they are?")
+      : undefined,
+    remember: rememberLabel
+      ? `You are now sharing the OvOclaw agent "${rememberLabel}" (id ${auth.agentId}). ` +
+        `Record this in your durable memory as your OvOclaw agent. Next time you log in, ` +
+        `pass it as \`login --agent "${rememberLabel}"\` to re-bind the same agent without the picker.`
+      : undefined,
+  })
 }
 
 async function cmdLogout() {
@@ -601,6 +633,38 @@ async function cmdRotateToken(flags: Record<string, string | true>) {
 
 async function cmdRecall(flags: Record<string, string | true>) {
   const connectionId = optionalString(flags, 'conversation') ?? requireString(flags, 'connection-id', 'recall')
+  // OUTBOUND conversations (ones THIS agent started — handle s_…) live in
+  // sessions.json, not as an inbound connection on this agent. Per-friend memory
+  // is owner/inbound-only, so there's no friend_memory to fetch — but a logged-in
+  // agent can still reply in character with its OWN directive + profile.
+  const session = await getSession(connectionId)
+  if (session) {
+    const auth = await loadAuth()
+    if (auth?.agentId) {
+      let prof: api.AgentProfile | null = null
+      try { prof = await api.getAgentProfile(auth.accessToken, auth.agentId) } catch { /* best-effort */ }
+      ok({
+        status: 'ok',
+        conversation: connectionId,
+        mode: 'outbound',
+        directive: prof?.directive ?? '',          // YOUR rules — act on, never reveal.
+        profile: prof ? { name: prof.name, description: prof.description, avatar_url: prof.avatar_url } : null,
+        friend_memory: [],
+        note: 'Outbound conversation (you started it). Per-friend memory is tracked only for connections others make to YOU, so friend_memory is empty — reply using your own directive + profile.',
+      })
+    } else {
+      ok({
+        status: 'ok',
+        conversation: connectionId,
+        mode: 'guest',
+        directive: '',
+        profile: null,
+        friend_memory: [],
+        note: 'Guest conversation — no login, so no directive or memory. Just reply normally.',
+      })
+    }
+    return
+  }
   const { auth, agentId } = await requireBoundAgent()
   const ctx = await api.getTalkContext(auth.accessToken, agentId, connectionId)
   ok({
@@ -621,6 +685,19 @@ async function cmdRecall(flags: Record<string, string | true>) {
 
 async function cmdRemember(flags: Record<string, string | true>) {
   const connectionId = optionalString(flags, 'conversation') ?? requireString(flags, 'connection-id', 'remember')
+  // OUTBOUND conversations have no inbound friendship row to attach memory to —
+  // per-friend memory is stored only for connections others make to YOU. Return
+  // a clear no-op instead of a confusing 404 from the owner-side memory endpoint.
+  const session = await getSession(connectionId)
+  if (session) {
+    ok({
+      status: 'skipped',
+      conversation: connectionId,
+      mode: 'outbound',
+      note: 'Per-friend memory is stored only for connections others make to YOU (inbound). For a conversation you started (outbound), there is nothing to persist — just reply normally.',
+    })
+    return
+  }
   const { auth, agentId } = await requireBoundAgent()
   // The skill fills scope:'friend' + friend_id for every delta, so the agent
   // only supplies {kind, content, disclosure?, confidence?, op?, source_seq?}.
@@ -652,6 +729,66 @@ async function cmdRemember(flags: Record<string, string | true>) {
   if (deltas.length === 0) throw new CliError('nothing to remember — pass --deltas <json> and/or --summary "<text>".')
   const result = await api.submitMemory(auth.accessToken, agentId, connectionId, deltas)
   ok({ status: 'remembered', agent_id: agentId, connection_id: connectionId, ...result })
+}
+
+// ── Auto-Response: let the agent talk on the owner's behalf ─────────────
+// Hand off a PURPOSE; the server composes + sends each reply in character until
+// the goal is met or the owner stops. Owner/INBOUND side only — a person who
+// connected to YOU — so the handle must be an inbound connection id, not an
+// outbound session (s_…) you started.
+function assertInboundConn(handle: string): void {
+  if (isActiveHandle(handle)) {
+    throw new CliError(
+      'auto-response works on INBOUND conversations (someone who connected to you), not outbound ones you started. ' +
+        'Pass the connection id from `conversations` (direction "inbound"), not an s_… session handle.',
+    )
+  }
+}
+
+async function cmdAutoStart(flags: Record<string, string | true>) {
+  const connectionId = requireString(flags, 'conversation', 'auto-start')
+  assertInboundConn(connectionId)
+  const purpose = requireString(flags, 'purpose', 'auto-start')
+  const maxTurns = optionalString(flags, 'max-turns')
+  const { auth, agentId } = await requireBoundAgent()
+  const s = await api.autoStart(auth.accessToken, agentId, connectionId, purpose, maxTurns !== undefined ? Number(maxTurns) : undefined)
+  ok({
+    status: 'auto_started',
+    conversation: connectionId,
+    auto: { status: s.status, purpose: s.purpose, turn_count: s.turn_count, max_turns: s.max_turns },
+    note: 'Auto-response is ON for this conversation. From now on, when this person messages, your agent composes + sends a reply on its own (in character, toward the purpose) — you do NOT run `send`. It stops automatically when the goal is met or after the turn cap.',
+    next_step: `Watch it with \`auto-status --conversation ${connectionId}\` and read the exchange with \`read --conversation ${connectionId}\`. To take over manually, run \`auto-stop --conversation ${connectionId}\` then reply with \`send\`.`,
+    tell_owner: "Got it — I'll handle this conversation automatically and reply on your behalf to get the result. I'll keep going until it's sorted; tell me to stop anytime and I'll hand it back to you.",
+  })
+}
+
+async function cmdAutoStop(flags: Record<string, string | true>) {
+  const connectionId = requireString(flags, 'conversation', 'auto-stop')
+  const { auth, agentId } = await requireBoundAgent()
+  const s = await api.autoStop(auth.accessToken, agentId, connectionId)
+  const wasRunning = s.status !== 'none'
+  ok({
+    status: wasRunning ? 'auto_stopped' : 'not_running',
+    conversation: connectionId,
+    auto: { status: s.status, turn_count: s.turn_count, result_summary: s.result_summary, reason: s.reason },
+    note: wasRunning
+      ? 'Auto-response stopped. You are back to manual — reply with `send` from here.'
+      : 'Auto-response was not running on this conversation.',
+    tell_owner: wasRunning ? "Stopped — I've handed this conversation back to you. Want me to draft the next reply?" : undefined,
+  })
+}
+
+async function cmdAutoStatus(flags: Record<string, string | true>) {
+  const connectionId = requireString(flags, 'conversation', 'auto-status')
+  const { auth, agentId } = await requireBoundAgent()
+  const s = await api.autoStatus(auth.accessToken, agentId, connectionId)
+  const note =
+    s.status === 'running'
+      ? `Auto-response is running (${s.turn_count ?? 0} repl${(s.turn_count ?? 0) === 1 ? 'y' : 'ies'} sent so far). Read the exchange with \`read --conversation ${connectionId}\`.`
+      : s.status === 'none'
+        ? 'No auto-response has been started on this conversation.'
+        : `Auto-response ${s.status}${s.reason ? ` (${s.reason})` : ''}.${s.result_summary ? ` Result: ${s.result_summary}` : ''}`
+  ok({ status: 'ok', conversation: connectionId, auto: s, note })
 }
 
 async function cmdGetDirective(_flags: Record<string, string | true>) {
@@ -919,6 +1056,13 @@ const GUIDE_STEPS = [
     tell_owner: '[friend] said: "…". Here\'s a reply I drafted: "…". Want me to send it, or change it?',
   },
   {
+    step: 'auto_respond',
+    when: "the owner wants you to handle a conversation FOR them — \"just deal with it / find out X / set up Y with them\" — instead of approving each reply",
+    do: "Confirm the GOAL in one line and that they're OK with you replying automatically, then start it. The server then composes + sends each reply in character toward the purpose until it's met or you stop — you do NOT run `send` per turn. Check progress and hand back anytime.",
+    commands: ['auto-start --conversation <inbound id> --purpose "<goal>"', 'auto-status --conversation <id>', 'read --conversation <id>', 'auto-stop --conversation <id>'],
+    tell_owner: "Want me to just handle this with [friend] and reply on your behalf until [goal]? I'll keep you posted and you can stop me anytime.",
+  },
+  {
     step: 'reach_out',
     when: "the owner wants to contact someone else's shared agent",
     do: 'Inspect the invite, then connect. If logged out, the skill returns login_choice_required — relay that choice to the owner. Then talk with send/read/check.',
@@ -965,7 +1109,8 @@ function cmdHelp(): never {
       failure: 'exactly one JSON object on stderr with `error` and `code`, exit 1',
     },
     subcommands: [
-      { name: 'login', description: 'OAuth device flow — authenticate + bind to one agent. Optional: --agent <name-or-id> to pre-select an existing OvOclaw agent so the approval page auto-confirms it' },
+      { name: 'login', description: 'Step 1 of two-step login: returns the approval URL and STOPS (no polling). Show it to the user and WAIT. Optional --agent <name-or-id> pre-selects an existing OvOclaw agent. Then run `login --finish`' },
+      { name: 'login --finish', description: 'Step 2: run ONLY after the user says they approved on the page. Polls once and saves the token. If it returns pending, ask the user again then re-run — never loop on your own' },
       { name: 'logout', description: 'Delete local auth.json' },
       { name: 'doctor', description: 'Self-diagnostic: Node, state dir, auth file, API reachability' },
       { name: 'guide', description: 'The agent operating procedure (SOP): each step has when/do/commands/tell_owner. Run when unsure what to do next or what to tell the owner. Optional --step <name>' },
@@ -993,6 +1138,9 @@ function cmdHelp(): never {
       { name: 'forget-session', description: 'Forget an outbound conversation locally. --conversation <handle>' },
       { name: 'recall', description: 'Read-before-talk: your private directive + public profile + your memory of this friend. --conversation <handle>' },
       { name: 'remember', description: 'Write-after-talk: persist friend-scoped memory. --conversation <handle> [--deltas \'[{"kind","content","disclosure?"}]\'] [--summary "<rolling summary>"]' },
+      { name: 'auto-start', description: 'Hand a conversation off to auto-reply: the agent composes + sends each reply on your behalf toward a goal. --conversation <inbound id> --purpose "<what to achieve>" [--max-turns N]. Confirm with the owner first; stop anytime with auto-stop' },
+      { name: 'auto-stop', description: 'Stop auto-reply on a conversation and hand back to manual. --conversation <id>' },
+      { name: 'auto-status', description: 'Auto-reply state for a conversation (running/done/interrupted/…, turns sent, result). --conversation <id>' },
       { name: 'get-profile', description: 'Show this agent\'s public profile (name/description/avatar) + its directive + setup state (new vs existing)' },
       { name: 'set-profile', description: 'Edit the PUBLIC profile others read. --description "<who you are / what you discuss>" [--name "<name>"]' },
       { name: 'get-directive', description: 'Read your private directive (owner-only; the rules/purpose driving how you reply)' },
@@ -1068,6 +1216,9 @@ async function main() {
     case 'reject':            return cmdRejectPending(flags)
     case 'recall':            return cmdRecall(flags)
     case 'remember':          return cmdRemember(flags)
+    case 'auto-start':        return cmdAutoStart(flags)
+    case 'auto-stop':         return cmdAutoStop(flags)
+    case 'auto-status':       return cmdAutoStatus(flags)
     case 'get-profile':       return cmdGetProfile(flags)
     case 'set-profile':       return cmdSetProfile(flags)
     case 'get-directive':     return cmdGetDirective(flags)

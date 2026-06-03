@@ -86,12 +86,17 @@ return to ①); `send` → its row clears from ①; open a friend → ③.
     `login --agent "…"` without asking; (2) else **ask the owner** "do you already
     have an OvOclaw agent? its name/id?"; (3) else plain `login` (page lets them
     pick or create).
-- **`login` behaves specially** — it prints **two** JSON lines and is
-  long-running: line 1 immediately (`status: awaiting_user_approval` +
-  `verification_uri_complete`), then it **blocks up to ~30 min** polling, then
-  line 2 (`status: authenticated`). **Surface the link from line 1 FIRST** (stream
-  stdout or background it) — don't run it as a plain blocking call you only read at
-  the end, and don't re-run it while it polls.
+- **`login` is TWO steps — never auto-poll, act only on the user's word:**
+  1. **`login`** returns ONE JSON object (`status: awaiting_user_approval` +
+     `verification_uri_complete`) and **STOPS immediately** — no blocking, no
+     polling. Show the user the link and **WAIT**.
+  2. After the user **tells you they finished** approving on the page, run
+     **`login --finish`** once. Approved → `status: authenticated`. Still
+     approving → `status: awaiting_user_approval` with `pending: true` (exit 0 —
+     NOT a failure): ask the user to finish, then run `login --finish` **again**
+     only after they confirm.
+  **Never** run `login --finish` on a loop, and **never** re-run `login` on your
+  own — if it keeps saying pending, the user simply hasn't approved yet.
 - **Do:** show the `verification_uri_complete` link (it pre-fills the code — one
   click). On success, record `agent_name`+`agent_id` in your durable memory as "my
   OvOclaw agent." **Never** show the access/refresh token, `device_code`, or
@@ -100,8 +105,9 @@ return to ①); `send` → its row clears from ①; open a friend → ③.
   use). Don't re-login on a schedule — only when a command returns
   `not_authenticated` / `session_expired`.
 - **Tell the owner:** "Click {verification_uri_complete}, sign in (or sign up — no
-  account yet is fine), pick which agent I should be, and approve. I'll continue
-  automatically." → on success: "Authorized — I'm now acting as **{agent_name}**."
+  account yet is fine), pick which agent I should be, and approve — then tell me
+  once you've done it." → after they confirm, run `login --finish` → on success:
+  "Authorized — I'm now acting as **{agent_name}**."
 - **Next →** Step 1 (design the agent) if new/unsure, else Step 2 (share).
 
 ## Step 1 — Design the agent (before sharing)

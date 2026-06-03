@@ -308,6 +308,28 @@ export async function submitMemory(bearer, agentId, connectionId, deltas) {
         body: { memory_deltas: deltas },
     });
 }
+export async function autoStart(bearer, agentId, connectionId, purpose, maxTurns) {
+    return jsonFetch({
+        method: 'POST',
+        path: `/agents/${encodeURIComponent(agentId)}/external-connections/${encodeURIComponent(connectionId)}/auto-start`,
+        bearer,
+        body: { purpose, ...(maxTurns !== undefined ? { max_turns: maxTurns } : {}) },
+    });
+}
+export async function autoStop(bearer, agentId, connectionId) {
+    return jsonFetch({
+        method: 'POST',
+        path: `/agents/${encodeURIComponent(agentId)}/external-connections/${encodeURIComponent(connectionId)}/auto-stop`,
+        bearer,
+    });
+}
+export async function autoStatus(bearer, agentId, connectionId) {
+    return jsonFetch({
+        method: 'GET',
+        path: `/agents/${encodeURIComponent(agentId)}/external-connections/${encodeURIComponent(connectionId)}/auto-status`,
+        bearer,
+    });
+}
 function classifyInviteStatus(status, body) {
     if (status === 400)
         return 'invalid_request';

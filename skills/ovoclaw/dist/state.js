@@ -245,6 +245,46 @@ export async function saveBoundAgent(agent) {
     }
     catch { }
 }
+// ── Pending device-flow login (two-step) ─────────────────────────────
+// `login` requests a device code and stashes it here, then returns the
+// approval URL immediately WITHOUT polling. `login --finish` — run only after
+// the user says they approved — reads this back and polls once for the token.
+// Kept in the SAME per-agent state dir so the finished token lands in the right
+// folder. This is what stops the agent from silently looping `login`.
+function pendingLoginFile() { return join(dir(), 'login-pending.json'); }
+export async function savePendingLogin(p) {
+    await ensureDir();
+    const f = pendingLoginFile();
+    await fs.writeFile(f, JSON.stringify(p, null, 2), { mode: 0o600 });
+    try {
+        await fs.chmod(f, 0o600);
+    }
+    catch { }
+}
+export async function loadPendingLogin() {
+    try {
+        const raw = await fs.readFile(pendingLoginFile(), 'utf8');
+        const parsed = JSON.parse(raw);
+        if (typeof parsed === 'object' && parsed !== null && typeof parsed.deviceCode === 'string') {
+            return parsed;
+        }
+        return null;
+    }
+    catch (e) {
+        if (e.code === 'ENOENT')
+            return null;
+        throw e;
+    }
+}
+export async function clearPendingLogin() {
+    try {
+        await fs.unlink(pendingLoginFile());
+    }
+    catch (e) {
+        if (e.code !== 'ENOENT')
+            throw e;
+    }
+}
 export async function isAuthFileWriteable() {
     try {
         await ensureDir();

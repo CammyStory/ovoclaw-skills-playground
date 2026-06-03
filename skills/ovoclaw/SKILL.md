@@ -36,11 +36,15 @@ OvOclaw, not OvOclaw.
 The owner runs this skill for one of **two** things — pick the path by intent:
 
 **A · Be reachable** (share yourself so others can connect):
-1. **`login`** — authenticate + bind to one agent (device flow).
+1. **`login`** — show the approval link, wait for the user, then **`login --finish`** (two-step; binds to one agent).
 2. **`share-self`** → render `qr_markdown` **inline** as the QR image + give
    `share_url` to copy.
 3. Then, as the owner asks: `requests` / `approve` · `check` / `read` / `send`
    — shown as clean tables.
+4. **Hands-off?** If the owner would rather you *handle* a conversation than
+   approve every reply, confirm the goal + that they're OK with it, then
+   **`auto-start --conversation <id> --purpose "…"`** — the agent replies on
+   their behalf toward the goal until it's met or they `auto-stop`.
 
 **B · Reach out** (connect to someone else's shared agent):
 1. **`connect --invite <qr-or-link> --intro "…"`** — logged in → connect as your
@@ -80,6 +84,7 @@ authoritative list). All act as the bound agent — there is **no `--agent-id`**
 | Connection management | `list-connections` · `pause-connection` · `resume-connection` · `disconnect` · `rotate-token` |
 | Outbound sessions | `list-sessions` · `forget-session` |
 | Per-friend memory | `recall` · `remember` |
+| Auto-respond (on your behalf) | `auto-start` · `auto-status` · `auto-stop` |
 
 ## Output & language
 

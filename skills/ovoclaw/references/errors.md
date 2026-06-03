@@ -7,8 +7,9 @@
   them to the owner (see the table standard in `references/guide.md`).
 - Every **failure** → **one JSON object on stderr**, exit non-zero, always with
   `error` + `code`. **Branch on `code`, never on the English message.**
-- `login` is the only multi-line command (it prints two JSON lines — see Step 0 in
-  `references/guide.md`).
+- `login` is **two steps**: `login` returns the approval link and stops (no
+  polling); after the user approves, `login --finish` completes it. Never loop —
+  see Step 0 in `references/guide.md`.
 - **Don't retry** on `rate_limited`, `access_denied`, `forbidden`,
   `not_implemented_yet`, or `server_not_ready`.
 
@@ -18,8 +19,8 @@
 | --- | --- | --- |
 | `not_authenticated` | No auth.json present | Run `login` (or surface to user) |
 | `session_expired` | Token expired or revoked | Run `login` |
-| `authorization_pending` | Device flow: user hasn't approved yet | `login` handles this internally |
-| `slow_down` | Device flow: polling too fast | `login` handles this internally |
+| `authorization_pending` | Device flow: user hasn't approved yet | `login --finish` returns `status: awaiting_user_approval` (`pending: true`, exit 0) — ask the user to finish, then re-run `login --finish` |
+| `slow_down` | Device flow: polling too fast | Same as pending — wait for the user, don't loop `login --finish` |
 | `access_denied` | Device flow: user denied | Stop; user must initiate again |
 | `expired_token` | Device flow: user_code expired | Run `login` again |
 | `server_not_ready` | Server has no device-flow endpoints | Check `OVOCLAW_API_BASE` |

@@ -14,7 +14,8 @@ commands accept `--json` (a no-op; JSON is the default output).
 
 | Command | Required flags | Purpose |
 | --- | --- | --- |
-| `login` | — (opt `--agent <name-or-id>`) | Device flow; authenticate + bind to one agent. Pre-selects with `--agent`; the page still requires approval and falls back to a chooser on a wrong value |
+| `login` | — (opt `--agent <name-or-id>`) | Step 1: returns the approval link and STOPS (no poll). Pre-selects with `--agent`; the page still requires approval and falls back to a chooser on a wrong value |
+| `login --finish` | — | Step 2 (after the user approves): polls once + saves the token. Returns `authenticated`, or `awaiting_user_approval`+`pending:true` if not done yet — re-run only after the user confirms |
 | `logout` | — | Delete this agent's auth.json |
 | `doctor` | — | Self-diagnostic; reports `agent_binding`, state dir, auth file, API base |
 | `guide` | — (opt `--step <name>`) | Agent operating procedure (SOP) as JSON: per step → when / do / commands / `tell_owner` |
@@ -46,6 +47,9 @@ commands accept `--json` (a no-op; JSON is the default output).
 | `forget-session` | `--conversation <handle>` | Forget an outbound conversation locally |
 | `recall` | `--conversation <handle>` | Read-before-talk: your private directive + public profile + your memory of this friend |
 | `remember` | `--conversation <handle>` (opt `--deltas <json>`, `--summary "<text>"`) | Write-after-talk: persist friend-scoped memory |
+| `auto-start` | `--conversation <inbound id> --purpose "<goal>"` (opt `--max-turns N`) | Hand the conversation off: the agent composes + SENDS each reply on the owner's behalf toward the goal, in character, until met/capped/stopped. Confirm with the owner first |
+| `auto-stop` | `--conversation <id>` | Stop auto-reply, back to manual |
+| `auto-status` | `--conversation <id>` | Auto-reply state (running/done/interrupted/…, turns sent, result) |
 
 ## State, config & per-agent isolation
 

@@ -260,6 +260,47 @@ export async function saveBoundAgent(agent: BoundAgentState): Promise<void> {
   try { await fs.chmod(f, 0o600) } catch {}
 }
 
+// ── Pending device-flow login (two-step) ─────────────────────────────
+// `login` requests a device code and stashes it here, then returns the
+// approval URL immediately WITHOUT polling. `login --finish` — run only after
+// the user says they approved — reads this back and polls once for the token.
+// Kept in the SAME per-agent state dir so the finished token lands in the right
+// folder. This is what stops the agent from silently looping `login`.
+function pendingLoginFile(): string { return join(dir(), 'login-pending.json') }
+
+export interface PendingLogin {
+  deviceCode: string
+  interval: number   // seconds between polls (server hint)
+  expiresAt: string  // ISO 8601 — after this the device code is dead
+  agentHint?: string
+  startedAt: string  // ISO 8601
+}
+
+export async function savePendingLogin(p: PendingLogin): Promise<void> {
+  await ensureDir()
+  const f = pendingLoginFile()
+  await fs.writeFile(f, JSON.stringify(p, null, 2), { mode: 0o600 })
+  try { await fs.chmod(f, 0o600) } catch {}
+}
+export async function loadPendingLogin(): Promise<PendingLogin | null> {
+  try {
+    const raw = await fs.readFile(pendingLoginFile(), 'utf8')
+    const parsed = JSON.parse(raw)
+    if (typeof parsed === 'object' && parsed !== null && typeof (parsed as PendingLogin).deviceCode === 'string') {
+      return parsed as PendingLogin
+    }
+    return null
+  } catch (e) {
+    if ((e as NodeJS.ErrnoException).code === 'ENOENT') return null
+    throw e
+  }
+}
+export async function clearPendingLogin(): Promise<void> {
+  try { await fs.unlink(pendingLoginFile()) } catch (e) {
+    if ((e as NodeJS.ErrnoException).code !== 'ENOENT') throw e
+  }
+}
+
 export async function isAuthFileWriteable(): Promise<{ ok: boolean; reason?: string }> {
   try {
     await ensureDir()

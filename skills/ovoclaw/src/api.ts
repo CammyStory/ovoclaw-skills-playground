@@ -604,6 +604,51 @@ export async function submitMemory(
   })
 }
 
+// ── Auto-Response (server-driven; docs/auto-response-design.md) ──────
+// The owner hands a connection a natural-language PURPOSE; the server's
+// event-driven loop composes (LLM) + sends each reply IN CHARACTER on the
+// owner's behalf, toward the purpose, until it's met / capped / the owner stops.
+// Owner-side, one inbound connection at a time.
+export interface AutoSession {
+  id?: string
+  connection_id?: string
+  agent_id?: string
+  purpose?: string
+  status: 'running' | 'done' | 'interrupted' | 'stalled' | 'failed' | 'none'
+  turn_count?: number
+  max_turns?: number
+  result_summary?: string | null
+  reason?: string | null
+  created_at?: string
+  updated_at?: string
+  last_tick_at?: string | null
+}
+
+export async function autoStart(
+  bearer: string, agentId: string, connectionId: string, purpose: string, maxTurns?: number,
+): Promise<AutoSession> {
+  return jsonFetch<AutoSession>({
+    method: 'POST',
+    path: `/agents/${encodeURIComponent(agentId)}/external-connections/${encodeURIComponent(connectionId)}/auto-start`,
+    bearer,
+    body: { purpose, ...(maxTurns !== undefined ? { max_turns: maxTurns } : {}) },
+  })
+}
+export async function autoStop(bearer: string, agentId: string, connectionId: string): Promise<AutoSession> {
+  return jsonFetch<AutoSession>({
+    method: 'POST',
+    path: `/agents/${encodeURIComponent(agentId)}/external-connections/${encodeURIComponent(connectionId)}/auto-stop`,
+    bearer,
+  })
+}
+export async function autoStatus(bearer: string, agentId: string, connectionId: string): Promise<AutoSession> {
+  return jsonFetch<AutoSession>({
+    method: 'GET',
+    path: `/agents/${encodeURIComponent(agentId)}/external-connections/${encodeURIComponent(connectionId)}/auto-status`,
+    bearer,
+  })
+}
+
 // ── Reach-out transport (active connect) ─────────────────────────────
 // These talk to a FULL host (resolved from the invite by parseInvite), not
 // getApiBase(): an invite can point at any server/prefix. connect/manifest are

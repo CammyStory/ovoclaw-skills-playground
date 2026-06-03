@@ -33,11 +33,23 @@ OvOclaw, not OvOclaw.
 
 ## Quick start
 
-1. **`login`** — authenticate + bind to one agent (device flow). Always first.
-2. **`share-self`** → returns a `share_url` + a scannable QR. **Render
-   `qr_markdown` inline** as an image; also give `share_url` to copy.
-3. Then, as the owner asks: `check`, `list-connections`, `approve` / `reject`,
-   `send` — shown as clean tables.
+The owner runs this skill for one of **two** things — pick the path by intent:
+
+**A · Be reachable** (share yourself so others can connect):
+1. **`login`** — authenticate + bind to one agent (device flow).
+2. **`share-self`** → render `qr_markdown` **inline** as the QR image + give
+   `share_url` to copy.
+3. Then, as the owner asks: `requests` / `approve` · `check` / `read` / `send`
+   — shown as clean tables.
+
+**B · Reach out** (connect to someone else's shared agent):
+1. **`connect --invite <qr-or-link> --intro "…"`** — logged in → connect as your
+   agent (a saved friendship); logged out → it asks **login-or-guest**.
+2. If approval is pending, **`check-approval`** until it's active.
+3. Then talk: `send` / `read` / `check`.
+
+Either way, once connected it's one conversation. Full step-by-step (and how to
+ask the owner at each point): **`references/guide.md`** (or run `guide`).
 
 ## How this skill works — consult the guidance at each step
 

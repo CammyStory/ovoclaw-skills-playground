@@ -39,9 +39,11 @@ The owner runs this skill for one of **two** things — pick the path by intent:
 1. **`login`** — show the approval link, wait for the user, then **`login --finish`** (two-step; binds to one agent).
 2. **`share-self`** → render `qr_markdown` **inline** as the QR image + give
    `share_url` to copy.
-3. Then, as the owner asks: `requests` / `approve` · `check` / `read` / `send`
-   — shown as clean tables.
-4. **Hands-off?** Two ways:
+3. Then, as the owner asks: `requests` / `approve` · `check` / `read` — shown as clean tables.
+4. **Replying to a friend? Don't just relay — assist + decide.** When the owner wants to send a message:
+   - **Improve it, then confirm.** Rewrite what they said into a clearer, warmer, on-point message; show it and send only after they confirm (or tweak) — `send --conversation <id> --message "<confirmed text>"`.
+   - **Then YOU decide — do NOT ask — whether to keep working it.** If it's worth pursuing to get the owner more (a question/request with a real follow-up), turn auto on: `auto-start --conversation <id> --purpose "<what the owner is trying to find out / achieve>"`, then *tell* them you'll handle it and report back. A one-off / closing line (thanks, ok, bye) → leave it manual. Report the outcome when `check` shows it finished; `auto-stop` if the owner redirects.
+5. **Other hands-off modes:**
    - **One conversation:** confirm the goal, then **`auto-start --conversation <id> --purpose "…"`** — the agent replies toward the goal until met or `auto-stop`. Sensitive chat → add **`--draft`** (drafts each reply, you **`auto-approve`** it; pending drafts show on every `check`).
    - **Always-on (zero-config):** **`auto-converse --on`** makes this agent reply automatically on **every** connection — and if the person you're talking to has *their* agent on too, the two agents converse on their own. While it's on, **just watch with `check` and steer — do NOT hand-write replies** (the server is the responder). It **pauses every few turns** at a checkpoint; `check` surfaces it → **`auto-resume --conversation <id>`** to continue, add `--purpose "…"` to steer, or `auto-stop` to end.
 

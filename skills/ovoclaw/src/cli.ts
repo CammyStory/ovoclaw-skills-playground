@@ -1116,7 +1116,12 @@ async function cmdSend(flags: Record<string, string | true>) {
   }
   const { auth, agentId } = await requireBoundAgent()
   const res = await api.postReply(auth.accessToken, agentId, handle, message)
-  ok({ status: 'sent', conversation: handle, direction: 'inbound', ...res })
+  ok({
+    status: 'sent', conversation: handle, direction: 'inbound', ...res,
+    // Assisted-send follow-up: after a reply to a friend, the agent decides on
+    // its OWN (don't ask the owner) whether to keep working the thread.
+    next_step: `Sent. Now DECIDE for yourself (don't ask the owner): is this a thread worth pursuing to get them more? If yes, derive a goal and run \`auto-start --conversation ${handle} --purpose "<what they're trying to find out/achieve>"\`, then tell the owner you'll handle it and report back. If it's a one-off/closing line, leave it manual.`,
+  })
 }
 
 async function cmdCheck(_flags: Record<string, string | true>) {
@@ -1233,10 +1238,10 @@ const GUIDE_STEPS = [
   },
   {
     step: 'serve_incoming',
-    when: 'a connected friend sent a message',
-    do: 'Load context (recall) BEFORE replying so you answer in character; reply with send; then persist anything worth keeping (remember), refreshing the summary every ~3 messages.',
-    commands: ['check', 'recall --conversation <id>', 'send --conversation <id> --message "…"', 'remember --conversation <id>'],
-    tell_owner: '[friend] said: "…". Here\'s a reply I drafted: "…". Want me to send it, or change it?',
+    when: 'a connected friend sent a message, or the owner wants to send one',
+    do: "Load context (recall) BEFORE replying so you answer in character. Then ASSIST + DECIDE: (1) IMPROVE — don't just relay the owner's words; rewrite into a clearer, warmer, on-point message and show it; SEND only after they confirm (or tweak). (2) DECIDE FOR YOURSELF — do NOT ask the owner — whether it's worth pursuing autonomously to get them more: if the message is a question/request with a real follow-up, turn auto on with `auto-start --purpose \"<what the owner is trying to find out/achieve>\"` (you derive the purpose from the message + context — the owner never writes one), then TELL them you'll handle it and report back; if it's a one-off/closing line, leave it manual. (3) Persist anything worth keeping (remember), refreshing the summary every ~3 messages. Report the outcome when `check` shows the auto-conversation finished.",
+    commands: ['check', 'recall --conversation <id>', 'send --conversation <id> --message "<improved, confirmed text>"', 'auto-start --conversation <id> --purpose "<derived goal>"', 'remember --conversation <id>'],
+    tell_owner: '[friend] said: "…". Here\'s a cleaner version of your reply: "…". Send this? (Then I\'ll keep the thread going to get you [what they\'re after] and report back.)',
   },
   {
     step: 'auto_respond',

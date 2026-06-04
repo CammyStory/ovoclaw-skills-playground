@@ -13,7 +13,7 @@ import { SKILL_NAME, SKILL_VERSION } from './version.js';
 // Same shape as ovoclaw-connect — agents already trained on that contract
 // can branch on `code` here without learning a new convention.
 // The installed skill folder on disk (parent of dist/), so update guidance can
-// name the exact location to replace. .../skills/ovoclaw/dist/cli.js → .../skills/ovoclaw
+// name the exact location to replace. .../skills/siobac/dist/cli.js → .../skills/siobac
 function skillDir() {
     return resolve(dirname(fileURLToPath(import.meta.url)), '..');
 }
@@ -22,9 +22,9 @@ function skillDir() {
 // `git pull` in place — instead spell out: get the latest from the RIGHT repo,
 // then replace/re-point this exact folder. dist/ is prebuilt (no build step).
 function updateInstruction(repoUrl) {
-    const repo = repoUrl || 'https://github.com/CammyStory/ovoclaw-skills-playground';
+    const repo = repoUrl || 'https://github.com/CammyStory/siobac-skills-playground';
     return [
-        `To update: pull the latest from ${repo} (the skill is its \`skills/ovoclaw/\` folder; \`dist/\` is prebuilt, no build step),`,
+        `To update: pull the latest from ${repo} (the skill is its \`skills/siobac/\` folder; \`dist/\` is prebuilt, no build step),`,
         `then replace this installed copy at ${skillDir()} with that folder (or re-point this platform at it) and re-run.`,
         `If you cloned the repo, \`git -C <your clone> pull\` then re-sync that folder here.`,
     ].join(' ');
@@ -292,7 +292,7 @@ async function cmdLogin(flags) {
         user_code: codeResp.user_code,
         expires_in_seconds: codeResp.expires_in,
         message: 'Show the user verification_uri_complete and tell them to click it — the code is pre-filled, no manual entry. ' +
-            '(Fallback: open verification_uri and enter user_code.) On that page they sign IN — or, if they have no OvOclaw account yet, SIGN UP right there (a new account creates an agent automatically) — then pick which agent to share and approve.',
+            '(Fallback: open verification_uri and enter user_code.) On that page they sign IN — or, if they have no Siobac account yet, SIGN UP right there (a new account creates an agent automatically) — then pick which agent to share and approve.',
         // The whole point of the two-step flow: do NOT poll, do NOT re-run `login`.
         next_step: 'WAIT for the USER to tell you they finished approving on the page. ONLY THEN run `login --finish` once to complete it. ' +
             'Do NOT poll, and do NOT re-run `login` on your own — if `login --finish` says still-pending, ask the user again and run `login --finish` only after they confirm.',
@@ -388,12 +388,12 @@ async function cmdLoginFinish(_flags) {
             : 'Show the owner this agent and ask how they want to set it up, then `share-self`.',
         tell_owner: prof
             ? (prof.is_new
-                ? "Before I put you on OvOclaw, let's set you up: a short public description (who you are + what I can talk about) and your private rules for how I should act. Want to do that now?"
-                : "Here's how you're currently set up on OvOclaw — want to update your profile or rules before I share you, or keep them as they are?")
+                ? "Before I put you on Siobac, let's set you up: a short public description (who you are + what I can talk about) and your private rules for how I should act. Want to do that now?"
+                : "Here's how you're currently set up on Siobac — want to update your profile or rules before I share you, or keep them as they are?")
             : undefined,
         remember: rememberLabel
-            ? `You are now sharing the OvOclaw agent "${rememberLabel}" (id ${auth.agentId}). ` +
-                `Record this in your durable memory as your OvOclaw agent. Next time you log in, ` +
+            ? `You are now sharing the Siobac agent "${rememberLabel}" (id ${auth.agentId}). ` +
+                `Record this in your durable memory as your Siobac agent. Next time you log in, ` +
                 `pass it as \`login --agent "${rememberLabel}"\` to re-bind the same agent without the picker.`
             : undefined,
     });
@@ -442,7 +442,7 @@ function qrUrlFor(slug) {
 // the agent drops this straight into its reply so the user sees a scannable QR
 // image, not a bare URL. SKILL.md tells the agent to prefer this over the link.
 function qrMarkdownFor(slug) {
-    return `![Scan to reach me on OvOclaw](${qrUrlFor(slug)})`;
+    return `![Scan to reach me on Siobac](${qrUrlFor(slug)})`;
 }
 async function cmdShareSelf(flags) {
     optionalString(flags, 'description'); // accepted for forward-compat; not used by the invite endpoint
@@ -469,7 +469,7 @@ async function cmdShareSelf(flags) {
         qr_markdown: qrMarkdownFor(invite.slug),
         note: 'DISPLAY THE QR INLINE: render it as an image so the user sees a scannable QR, not a link — drop the ready-made `qr_markdown` straight into your reply (it is `![](qr_url)`). Also give `share_url` as a copyable link. Only if your platform cannot render images, fall back to showing `qr_url` as a plain link. (createInvite is idempotent — an already-shared agent returns its existing invite.)',
         next_step: 'If you have not already, help the owner DESIGN their agent so others understand who they are: set the private DIRECTIVE (`set-directive --content "…"` — the rules/purpose for how you reply on their behalf) and confirm the PUBLIC PROFILE (name/description) is accurate. Then, when a friend connects, use `recall` before replying and `remember` after (see "Step 6 — Talk in character" in references/guide.md, or run `guide --step talk_in_character`).',
-        tell_owner: "Here's your OvOclaw QR / link — anyone you give it to can reach me. [render the QR image inline] Want new connections to need your approval first, or auto-accept them?",
+        tell_owner: "Here's your Siobac QR / link — anyone you give it to can reach me. [render the QR image inline] Want new connections to need your approval first, or auto-accept them?",
     });
 }
 async function cmdListShares() {
@@ -890,7 +890,7 @@ async function cmdSetDirective(flags) {
     ok({
         status: 'ok', agent_id: agentId, updated: true,
         next_step: 'Private directive saved. If the PUBLIC profile description is empty, set it with `set-profile --description "…"`. When both reflect the owner, run `share-self`.',
-        tell_owner: 'Saved your private rules. Ready for me to share you on OvOclaw, or do you want to set your public description first?',
+        tell_owner: 'Saved your private rules. Ready for me to share you on Siobac, or do you want to set your public description first?',
     });
 }
 // Show the agent's own profile (public card) + directive + setup state.
@@ -983,12 +983,12 @@ async function cmdConnect(flags) {
     if (!loggedIn && !guest && !existing) {
         ok({
             status: 'login_choice_required',
-            message: 'You are not logged in. Ask the owner: LOG IN (or SIGN UP) so this agent reaches out as ITSELF (a saved, account-anchored friendship), OR connect once as an anonymous GUEST. No OvOclaw account yet is fine — `login` opens a page where the owner can sign IN or create a NEW account (and an agent) on the spot; do NOT tell them to sign up anywhere else.',
+            message: 'You are not logged in. Ask the owner: LOG IN (or SIGN UP) so this agent reaches out as ITSELF (a saved, account-anchored friendship), OR connect once as an anonymous GUEST. No Siobac account yet is fine — `login` opens a page where the owner can sign IN or create a NEW account (and an agent) on the spot; do NOT tell them to sign up anywhere else.',
             options: {
                 login: 'run `login` — on that page the owner logs in OR signs up (a new account creates an agent automatically); then `connect` again → registered friendship. (Sign-up may ask for an invite code.)',
                 guest: 're-run `connect … --guest` → one-off anonymous connection, no account',
             },
-            tell_owner: "Do you want me to reach out as YOU — a saved connection that remembers this person? That just needs a quick OvOclaw login; no account yet is fine, you can sign up on the same page. Or I can connect as an anonymous guest for a one-off chat.",
+            tell_owner: "Do you want me to reach out as YOU — a saved connection that remembers this person? That just needs a quick Siobac login; no account yet is fine, you can sign up on the same page. Or I can connect as an anonymous guest for a one-off chat.",
         });
     }
     const bearer = loggedIn ? auth.accessToken : undefined;
@@ -1156,21 +1156,21 @@ const GUIDE_STEPS = [
         when: 'right after `login` when `agent_is_new` is true (no profile + no directive)',
         do: 'Design the agent BEFORE sharing: help the owner write the public profile and the private directive.',
         commands: ['set-profile --description "…"', 'set-directive --content "…"', 'share-self'],
-        tell_owner: "Before I put you on OvOclaw, let's set you up: a short public description (who you are + what I can talk about) and your private rules for how I should act. Want to do that now?",
+        tell_owner: "Before I put you on Siobac, let's set you up: a short public description (who you are + what I can talk about) and your private rules for how I should act. Want to do that now?",
     },
     {
         step: 'review_setup',
         when: 'right after `login` when the agent already has a profile and/or directive',
         do: 'Show the owner the current profile + directive and ASK whether to update either. Never overwrite silently. Then share.',
         commands: ['get-profile', 'set-profile --description "…"', 'set-directive --content "…"', 'share-self'],
-        tell_owner: "Here's how you're set up on OvOclaw right now — [show profile + directive]. Want to update anything before I share you, or keep it as is?",
+        tell_owner: "Here's how you're set up on Siobac right now — [show profile + directive]. Want to update anything before I share you, or keep it as is?",
     },
     {
         step: 'share',
         when: 'the owner wants to be reachable',
         do: 'Create/return the invite and show the QR + link. To change who-can-connect, use set-approval (keeps the same link) — never regenerate just to toggle approval.',
         commands: ['share-self', 'set-approval --on|--off', 'list-shares'],
-        tell_owner: "Here's your OvOclaw QR / link — share it and anyone can reach me. [render QR] Should new connections need your approval, or auto-accept?",
+        tell_owner: "Here's your Siobac QR / link — share it and anyone can reach me. [render QR] Should new connections need your approval, or auto-accept?",
     },
     {
         step: 'approve_requests',
@@ -1220,7 +1220,7 @@ function cmdHelp() {
     ok({
         name: SKILL_NAME,
         version: SKILL_VERSION,
-        description: 'ovoclaw — one agent, both directions on OvOclaw: be reached by others AND reach out to others. Run `guide` for the operating procedure; every command returns `next_step` + `tell_owner` to drive the flow and tell the human owner what to do.',
+        description: 'siobac — one agent, both directions on Siobac (咻叭): be reached by others AND reach out to others. Run `guide` for the operating procedure; every command returns `next_step` + `tell_owner` to drive the flow and tell the human owner what to do.',
         note: 'Agent-scoped. `login` uses the OAuth device flow and binds this ' +
             'authorization to ONE agent (picked on the approval page). Every command ' +
             'then acts as that agent only — it cannot touch your other agents or your ' +
@@ -1234,7 +1234,7 @@ function cmdHelp() {
             failure: 'exactly one JSON object on stderr with `error` and `code`, exit 1',
         },
         subcommands: [
-            { name: 'login', description: 'Step 1 of two-step login: returns the approval URL and STOPS (no polling). Show it to the user and WAIT. Optional --agent <name-or-id> pre-selects an existing OvOclaw agent. Then run `login --finish`' },
+            { name: 'login', description: 'Step 1 of two-step login: returns the approval URL and STOPS (no polling). Show it to the user and WAIT. Optional --agent <name-or-id> pre-selects an existing Siobac agent. Then run `login --finish`' },
             { name: 'login --finish', description: 'Step 2: run ONLY after the user says they approved on the page. Polls once and saves the token. If it returns pending, ask the user again then re-run — never loop on your own' },
             { name: 'logout', description: 'Delete local auth.json' },
             { name: 'doctor', description: 'Self-diagnostic: Node, state dir, auth file, API reachability' },
@@ -1291,12 +1291,12 @@ async function main() {
     const { flags } = parseArgs(argv.slice(1));
     delete flags.json; // no-op flag, same convention as ovoclaw-connect
     // Resolve (and PIN) this run's per-agent folder before any state I/O. login &
-    // connect CREATE a local .ovoclaw.json in the working dir when none exists, so
+    // connect CREATE a local .siobac.json in the working dir when none exists, so
     // each platform agent self-binds its own isolated folder; every other command
     // just reads the existing binding (env var > local file > shared default).
     // Pinning means a binding created here is honored for the rest of the run.
     await ensureAgentBinding(subcommand === 'login' || subcommand === 'connect');
-    // One-time carry-over of a pre-rename login (~/.ovoclaw-share → ~/.ovoclaw).
+    // One-time carry-over of a pre-rename login (~/.ovoclaw → ~/.siobac).
     await migrateLegacyState();
     switch (subcommand) {
         case 'doctor': return cmdDoctor();

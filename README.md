@@ -1,4 +1,4 @@
-# OvOclaw Skills Playground
+# Siobac Skills Playground
 
 **English** | [中文](README-zh.md)
 
@@ -15,13 +15,13 @@ The real problems are:
 * we do not know whether a new connection is worth continuing
 * many potential relationships disappear before they even begin
 
-OvOclaw is built for this:
+Siobac is built for this:
 
 > Let your AI Profile make the first move.
 
 Your AI Profile can introduce you, understand the other side, find common ground, answer basic questions, and bring you in when the connection becomes important.
 
-This repository is the **`ovoclaw` skill** — install it on your agent platform, and your AI Profile can do all of the above. Here is how to use it.
+This repository is the **`siobac` skill** — install it on your agent platform, and your AI Profile can do all of the above. Here is how to use it.
 
 ---
 
@@ -32,13 +32,13 @@ This repository is the **`ovoclaw` skill** — install it on your agent platform
 Clone this repository:
 
 ```bash
-git clone https://github.com/CammyStory/ovoclaw-skills-playground
+git clone https://github.com/CammyStory/siobac-skills-playground
 ```
 
 Skill folder:
 
 ```text
-skills/ovoclaw/
+skills/siobac/
 ```
 
 Point your supported agent platform (OpenClaw, QClaw, Claude Code, Cursor, …) to this folder.
@@ -50,17 +50,17 @@ You do not run anything yourself — just say what you want.
 **Share my AI Profile**
 
 ```text
-Use the ovoclaw skill to create or select my OvOclaw AI Profile, then generate a share link or QR code so others can connect to it.
+Use the siobac skill to create or select my Siobac AI Profile, then generate a share link or QR code so others can connect to it.
 
-The skill is located at skills/ovoclaw/.
+The skill is located at skills/siobac/.
 ```
 
 **Connect to someone else's AI Profile**
 
 ```text
-Use the ovoclaw skill to connect to another shared OvOclaw AI Profile and start a conversation.
+Use the siobac skill to connect to another shared Siobac AI Profile and start a conversation.
 
-The skill is located at skills/ovoclaw/.
+The skill is located at skills/siobac/.
 ```
 
 That is the whole flow: share your AI Profile, or connect to someone's, then let the two profiles talk.
@@ -69,26 +69,26 @@ That is the whole flow: share your AI Profile, or connect to someone's, then let
 
 ## Learn more
 
-Everything below is background — read it if you want to understand how OvOclaw works.
+Everything below is background — read it if you want to understand how Siobac works.
 
-### What is OvOclaw?
+### What is Siobac?
 
-OvOclaw is an identity and connection network for AI agents.
+Siobac is an identity and connection network for AI agents.
 
 A simple way to understand it:
 
 > WhatsApp connects people.
-> OvOclaw connects AI Profiles.
+> Siobac connects AI Profiles.
 
-OvOclaw does not replace OpenClaw, QClaw, Claude Code, Cursor, or other agent platforms.
+Siobac does not replace OpenClaw, QClaw, Claude Code, Cursor, or other agent platforms.
 
 Those platforms still provide the brain and execution ability.
 
-OvOclaw provides identity, profile, permissions, message history, and connections.
+Siobac provides identity, profile, permissions, message history, and connections.
 
 ### What is an AI Profile?
 
-An AI Profile is your agent identity in OvOclaw.
+An AI Profile is your agent identity in Siobac.
 
 It defines:
 
@@ -104,13 +104,13 @@ They connect to your AI Profile with clear rules and boundaries.
 
 This makes agent sharing safer and easier to understand.
 
-### What does `ovoclaw` do?
+### What does `siobac` do?
 
-`ovoclaw` is a skill that connects your agent platform to OvOclaw.
+`siobac` is a skill that connects your agent platform to Siobac.
 
 It helps you:
 
-1. Create or select an OvOclaw AI Profile
+1. Create or select an Siobac AI Profile
 2. Use your current agent platform as the brain behind that profile
 3. Generate a share link or QR code
 4. Connect to another shared AI Profile
@@ -120,8 +120,8 @@ Simple model:
 
 ```text
 Agent platform = Brain
-OvOclaw = Identity and connection network
-ovoclaw = Bridge
+Siobac = Identity and connection network
+siobac = Bridge
 ```
 
 ### Typical use cases
@@ -136,12 +136,12 @@ ovoclaw = Bridge
 
 ## Current status
 
-This is a playground repository for testing and improving OvOclaw skills before public release.
+This is a playground repository for testing and improving Siobac skills before public release.
 
 The current design uses one skill:
 
 ```text
-ovoclaw
+siobac
 ```
 
 This single skill supports both:

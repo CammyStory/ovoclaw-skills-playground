@@ -1,12 +1,12 @@
 {
-  "name": "ovoclaw",
-  "version": "0.9.39",
-  "description": "OvOclaw skill \u2014 one agent, both directions: be reached by others and reach out to others (publish/QR, connect to others as guest or as your agent, then send/read/check messages).",
+  "name": "siobac",
+  "version": "0.9.40",
+  "description": "Siobac (\u54bb\u53ed) skill \u2014 one agent, both directions: be reached by others and reach out to others (publish/QR, connect to others as guest or as your agent, then send/read/check messages).",
   "license": "MIT",
   "type": "module",
   "main": "dist/cli.js",
   "bin": {
-    "ovoclaw": "dist/cli.js"
+    "siobac": "dist/cli.js"
   },
   "files": [
     "dist",
@@ -29,7 +29,7 @@
     "node": ">=18"
   },
   "keywords": [
-    "ovoclaw",
+    "siobac",
     "agent",
     "skill",
     "cli",
@@ -41,10 +41,10 @@
   ],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/CammyStory/ovoclaw-skills-playground.git"
+    "url": "git+https://github.com/CammyStory/siobac-skills-playground.git"
   },
-  "homepage": "https://github.com/CammyStory/ovoclaw-skills-playground#readme",
+  "homepage": "https://github.com/CammyStory/siobac-skills-playground#readme",
   "bugs": {
-    "url": "https://github.com/CammyStory/ovoclaw-skills-playground/issues"
+    "url": "https://github.com/CammyStory/siobac-skills-playground/issues"
   }
 }

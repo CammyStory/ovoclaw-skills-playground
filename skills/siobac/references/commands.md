@@ -1,8 +1,8 @@
-# ovoclaw — command reference
+# siobac — command reference
 
 Full per-command detail. For *what to do when*, see `references/guide.md`. For
 errors + the output contract, see `references/errors.md`. The authoritative,
-always-current list is `ovoclaw help` (or `ovoclaw --help`).
+always-current list is `siobac help` (or `siobac --help`).
 
 **Identity model — one skill = one agent.** The agent is fixed at `login` (the
 owner picks it on the approval page). The skill is **self-scoped**: it shares
@@ -57,30 +57,30 @@ commands accept `--json` (a no-op; JSON is the default output).
 ## State, config & per-agent isolation
 
 - **API base:** defaults to `https://ovo.ovoclaw.com/dev` (override with
-  `OVOCLAW_API_BASE`; production is `https://api.ovoclaw.com`).
-- **State directory:** `~/.ovoclaw/` holds `auth.json` (+ `auth.json.bak`),
+  `SIOBAC_API_BASE`; production is `https://api.ovoclaw.com`).
+- **State directory:** `~/.siobac/` holds `auth.json` (+ `auth.json.bak`),
   `agent.json`, `sessions.json`.
 - **Per-agent isolation via a local binding file.** On first `login`/`connect` in
-  a working directory with no binding, the skill writes **`.ovoclaw.json`** there
+  a working directory with no binding, the skill writes **`.siobac.json`** there
   holding a non-secret `{ agent_key }`. That key selects this agent's private
-  folder `~/.ovoclaw/agents/<key>/`. Key resolution order:
-  `OVOCLAW_AGENT_KEY` env var > local `.ovoclaw.json` (found walking cwd → `$HOME`)
-  > shared `~/.ovoclaw/` default. Because each platform agent runs in its OWN
+  folder `~/.siobac/agents/<key>/`. Key resolution order:
+  `SIOBAC_AGENT_KEY` env var > local `.siobac.json` (found walking cwd → `$HOME`)
+  > shared `~/.siobac/` default. Because each platform agent runs in its OWN
   working directory, two agents get two folders — a second login can never
   overwrite the first's. `doctor` and `login` report `agent_binding`
   (`key · source · folder`); on a multi-agent platform each MUST be distinct.
 
 ## Updating the skill — keep the login
 
-The owner's login lives in **`~/.ovoclaw/`** (and `~/.ovoclaw/agents/<key>/`),
+The owner's login lives in **`~/.siobac/`** (and `~/.siobac/agents/<key>/`),
 **separate from the skill's code folder**. A normal update — replacing only the
 code folder — preserves it, so the owner does **not** re-login.
 
-- **Replace only the skill's code folder. NEVER delete `~/.ovoclaw/`** — that is
+- **Replace only the skill's code folder. NEVER delete `~/.siobac/`** — that is
   the login, not part of the skill.
-- Back up `~/.ovoclaw/auth.json` before a big update as cheap insurance. The skill
+- Back up `~/.siobac/auth.json` before a big update as cheap insurance. The skill
   also keeps `auth.json.bak` and self-restores if `auth.json` is lost/corrupt.
 - If the login is ever truly lost, run `login` again (the remembered agent in
   `agent.json` re-binds the same identity with one approval).
 - **Renamed from `ovoclaw-share`:** the state dir moved `~/.ovoclaw-share` →
-  `~/.ovoclaw`; an existing login is copied over automatically on first run.
+  `~/.siobac`; an existing login is copied over automatically on first run.

@@ -1,6 +1,6 @@
-# ovoclaw — step-by-step guidance
+# siobac — step-by-step guidance
 
-This is the **operating procedure** for the `ovoclaw` skill. `SKILL.md` is the
+This is the **operating procedure** for the `siobac` skill. `SKILL.md` is the
 thin entry point; **this file is what you consult before each next step.**
 
 **How to use it.** Work one step at a time. Each step below tells you:
@@ -73,18 +73,18 @@ return to ①); `send` → its row clears from ①; open a friend → ③.
   `login`; never send them elsewhere to register. (Sign-up may need an invite
   code, depending on server config.)
 - **Per-agent isolation (automatic).** On first `login`/`connect` in a working
-  directory, the skill drops a small `.ovoclaw.json` there with a non-secret
+  directory, the skill drops a small `.siobac.json` there with a non-secret
   `agent_key`; that key selects this agent's private folder
-  `~/.ovoclaw/agents/<key>/`. Because each platform agent runs in its OWN working
+  `~/.siobac/agents/<key>/`. Because each platform agent runs in its OWN working
   directory, two agents self-bind two folders and **one can never overwrite the
-  other's login**. (`OVOCLAW_AGENT_KEY` overrides; with neither, a single agent
-  uses the shared `~/.ovoclaw/`.) `doctor`/`login` report `agent_binding` — on a
+  other's login**. (`SIOBAC_AGENT_KEY` overrides; with neither, a single agent
+  uses the shared `~/.siobac/`.) `doctor`/`login` report `agent_binding` — on a
   multi-agent platform each MUST show a distinct key/folder.
 - **Commands:** `login` (opt `login --agent "<name-or-id>"` to pre-select).
   - **Pre-select the agent first**, in order: (1) **recall from your memory** — a
     prior login told you `agent_id`+`agent_name`; if you remember it, run
     `login --agent "…"` without asking; (2) else **ask the owner** "do you already
-    have an OvOclaw agent? its name/id?"; (3) else plain `login` (page lets them
+    have an Siobac agent? its name/id?"; (3) else plain `login` (page lets them
     pick or create).
 - **`login` is TWO steps — never auto-poll, act only on the user's word:**
   1. **`login`** returns ONE JSON object (`status: awaiting_user_approval` +
@@ -99,7 +99,7 @@ return to ①); `send` → its row clears from ①; open a friend → ③.
   own — if it keeps saying pending, the user simply hasn't approved yet.
 - **Do:** show the `verification_uri_complete` link (it pre-fills the code — one
   click). On success, record `agent_name`+`agent_id` in your durable memory as "my
-  OvOclaw agent." **Never** show the access/refresh token, `device_code`, or
+  Siobac agent." **Never** show the access/refresh token, `device_code`, or
   `auth.json`.
 - **Sessions auto-refresh** (~24h access token, ~30-day refresh, rotated each
   use). Don't re-login on a schedule — only when a command returns
@@ -126,7 +126,7 @@ return to ①); `send` → its row clears from ①; open a friend → ③.
     directive (rules/purpose + what to never reveal). Save each.
   - **Existing agent:** show current values and **ASK** before changing either —
     never overwrite silently.
-- **Tell the owner:** new → "Before I put you on OvOclaw, let's set you up: a short
+- **Tell the owner:** new → "Before I put you on Siobac, let's set you up: a short
   public description and your private rules for how I should act — want to do that
   now?"; existing → "Here's how you're set up — update anything, or keep it?"
 - **Next →** Step 2 (share).
@@ -144,7 +144,7 @@ return to ①); `send` → its row clears from ①; open a friend → ③.
 - **Do:** **render `qr_markdown` inline as an image** so the owner sees a scannable
   QR (not a bare link); also give `share_url` to copy. Only if images can't render,
   fall back to `qr_url` as a link. Then ask about approval.
-- **Tell the owner:** "Here's your OvOclaw QR / link — anyone you give it to can
+- **Tell the owner:** "Here's your Siobac QR / link — anyone you give it to can
   reach me. [render QR] Want new connections to need your approval first, or
   auto-accept?"
 - **Next →** Step 3 when someone requests; Step 4 to serve messages.
@@ -162,7 +162,7 @@ return to ①); `send` → its row clears from ①; open a friend → ③.
 
 ## Step 4 — Serve incoming messages (manual)
 
-- **When:** "any messages?", "check OvOclaw", "what did they say?", "reply with …".
+- **When:** "any messages?", "check Siobac", "what did they say?", "reply with …".
 - **What it does:** surfaces new/unanswered messages across ALL conversations
   (both directions) and lets the owner read and reply.
 - **Commands:** `check` (Inbox ①); `conversations` (list all); `read --conversation

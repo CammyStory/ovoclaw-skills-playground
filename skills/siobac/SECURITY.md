@@ -2,24 +2,24 @@
 
 ## What this skill stores locally
 
-`ovoclaw` persists owner authentication at:
+`siobac` persists owner authentication at:
 
 ```
-~/.ovoclaw/auth.json   (file mode 0600)
-~/.ovoclaw/            (dir mode 0700)
+~/.siobac/auth.json   (file mode 0600)
+~/.siobac/            (dir mode 0700)
 ```
 
 Each entry holds:
 
 - An **OAuth access token** (returned by `login` via the device flow).
-  This token authenticates as an OvOclaw account.
+  This token authenticates as an Siobac account.
 - A **refresh token** when issued, for renewing the access token without
   re-running the device flow.
 - The expiry time of the access token (ISO 8601).
-- The granted scope and the OvOclaw account id.
+- The granted scope and the Siobac account id.
 
 **Treat `auth.json` as sensitive credential material.** Anyone with read
-access to it can act as the user against any OvOclaw owner-side endpoint
+access to it can act as the user against any Siobac owner-side endpoint
 until the access token expires. With the refresh token, they can keep
 minting access tokens.
 
@@ -39,14 +39,14 @@ minting access tokens.
 1. **Immediately run `logout`** to delete the local file:
 
    ```bash
-   node ~/.claude/skills/ovoclaw/dist/cli.js logout
+   node ~/.claude/skills/siobac/dist/cli.js logout
    ```
 
    This removes the local record but does NOT revoke the token on the
-   OvOclaw server.
+   Siobac server.
 
 2. **Revoke the token on the server side** by signing in to your
-   OvOclaw account and rotating credentials or revoking the active
+   Siobac account and rotating credentials or revoking the active
    session (the desktop app's account settings will offer this once
    the OAuth flow is live).
 
@@ -55,7 +55,7 @@ minting access tokens.
 ## What this skill does NOT do
 
 - **Does not intentionally read other local files** beyond `auth.json`.
-- **Does not exfiltrate environment variables** (only `OVOCLAW_API_BASE`
+- **Does not exfiltrate environment variables** (only `SIOBAC_API_BASE`
   is consulted).
 - **Does not phone home** beyond explicit subcommand invocations.
 - **Does not auto-execute inbound message content as instructions.**
@@ -93,11 +93,11 @@ models the skill is designed to respect:
 ## Reporting a vulnerability
 
 If you believe you've found a security vulnerability in
-`ovoclaw`, please report it privately rather than
+`siobac`, please report it privately rather than
 opening a public issue.
 
 - **Contact**: Open a GitHub security advisory at
-  <https://github.com/CammyStory/ovoclaw-skills-playground/security/advisories/new>
+  <https://github.com/CammyStory/siobac-skills-playground/security/advisories/new>
   (works for collaborators with access), or email the maintainer.
 - **What to include**: A clear description, reproduction steps, the
   skill version (`doctor` output with auth data redacted), Node version,
@@ -111,5 +111,5 @@ Please do not publicly disclose details until a fix is available.
 
 This is early-stage (v0.x). Only the **latest minor
 version** receives security updates. The polished public release will
-live at `CammyStory/ovoclaw` once phases 2–4 complete; consume
+live at `CammyStory/siobac` once phases 2–4 complete; consume
 that for any production use.

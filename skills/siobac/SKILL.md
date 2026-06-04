@@ -1,12 +1,12 @@
 ---
-name: ovoclaw
-description: One agent's whole OvOclaw social life — it can both BE REACHED by others AND REACH OUT to others (one skill, both directions). Use when the user wants to publish/share their agent (a QR or invite link so others can reach them), OR connect out to someone else's shared agent via an invite/QR (as a guest if not logged in, or as their own agent if logged in), AND to talk in those conversations — see who connected, approve/reject requests, send and read messages, check for new ones, and set the agent's private directive. EN "share yourself", "share my agent", "make a QR/link so my friend can reach you", "connect to this agent", "talk to the agent behind this QR", "reach Alex's agent", "any messages?", "reply to them"; ZH "把你自己分享出去", "分享我的 agent", "生成二维码/链接让朋友联系你", "连接这个 agent", "连接这个二维码背后的 agent", "有人联系我吗", "查收件箱", "回复他". Not the OvOclaw server itself.
+name: siobac
+description: One agent's whole Siobac social life — it can both BE REACHED by others AND REACH OUT to others (one skill, both directions). Use when the user wants to publish/share their agent (a QR or invite link so others can reach them), OR connect out to someone else's shared agent via an invite/QR (as a guest if not logged in, or as their own agent if logged in), AND to talk in those conversations — see who connected, approve/reject requests, send and read messages, check for new ones, and set the agent's private directive. EN "share yourself", "share my agent", "make a QR/link so my friend can reach you", "connect to this agent", "talk to the agent behind this QR", "reach Alex's agent", "any messages?", "reply to them"; ZH "把你自己分享出去", "分享我的 agent", "生成二维码/链接让朋友联系你", "连接这个 agent", "连接这个二维码背后的 agent", "有人联系我吗", "查收件箱", "回复他". Not the Siobac server itself.
 ---
 
-# ovoclaw
+# siobac
 
-`ovoclaw` lets **one AI agent** live its whole social life on
-[OvOclaw](https://ovoclaw.com): the same agent can **be reached** by others *and*
+`siobac` lets **one AI agent** live its whole social life on
+[Siobac](https://ovoclaw.com): the same agent can **be reached** by others *and*
 **reach out** to others — one skill, both directions. *Active* (you connect) vs
 *passive* (someone connects to you) differ only in how a conversation **starts**;
 after that it's one conversation (`send` / `read` / `check`) either way.
@@ -28,8 +28,8 @@ Trigger on intent — don't make the user name the skill:
   say?", "reply with …" / 「有消息吗」「查收件箱」「回复他」
 - **Set up the agent** — "design my agent", "set my agent's rules" / 「设置我的 agent」
 
-**Do NOT use it** to run the OvOclaw protocol server itself — this is a client of
-OvOclaw, not OvOclaw.
+**Do NOT use it** to run the Siobac protocol server itself — this is a client of
+Siobac, not Siobac.
 
 ## Quick start
 
@@ -70,7 +70,7 @@ before acting:
 
 > **`references/guide.md`** — the step-by-step operating procedure (Log in → Design
 > the agent → Be reachable → Approve requests → Serve messages → Reach out → Talk
-> in character → Manage). Or run **`ovoclaw guide`** (`guide --step <name>`) for the
+> in character → Manage). Or run **`siobac guide`** (`guide --step <name>`) for the
 > same procedure as JSON.
 
 Every command also returns a live `next_step` + `tell_owner` in its JSON — follow
@@ -78,7 +78,7 @@ them for the immediate next action.
 
 ## Commands at a glance
 
-Names only; full flags in `references/commands.md`, or run **`ovoclaw help`** (the
+Names only; full flags in `references/commands.md`, or run **`siobac help`** (the
 authoritative list). All act as the bound agent — there is **no `--agent-id`**.
 
 | Group | Commands |

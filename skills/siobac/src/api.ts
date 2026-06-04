@@ -1,4 +1,4 @@
-// HTTP client for the OvOclaw owner-side API + OAuth Device Authorization
+// HTTP client for the Siobac owner-side API + OAuth Device Authorization
 // endpoints. Every public function here normalizes server errors into the
 // same ApiError shape so the CLI layer can emit a stable `code` field for
 // agents to branch on.
@@ -51,16 +51,17 @@ export function makeApiError(
 // This is the TEST/playground build: it targets the dev environment (the /dev
 // tunnel to the local server) so testing never touches public production data.
 // The polished public release points at https://api.ovoclaw.com instead.
-// Override anytime with OVOCLAW_API_BASE.
+// (The Siobac brand keeps the ovoclaw.com backend domain.) Override anytime with
+// SIOBAC_API_BASE (legacy OVOCLAW_API_BASE still honored).
 const DEFAULT_API_BASE = 'https://ovo.ovoclaw.com/dev'
 
 export function getApiBase(): string {
-  return process.env.OVOCLAW_API_BASE ?? DEFAULT_API_BASE
+  return process.env.SIOBAC_API_BASE ?? process.env.OVOCLAW_API_BASE ?? DEFAULT_API_BASE
 }
 
 // ── Skill update reminder ─────────────────────────────────────────────
 // The server echoes the latest/min skill version on every response (only for
-// requests carrying our X-Ovoclaw-Share-Version). We stash the last values
+// requests carrying our X-Siobac-Share-Version). We stash the last values
 // seen this run; the CLI attaches a `skill_update` block to its output when
 // we're behind, so the agent can tell the user to update.
 
@@ -81,11 +82,13 @@ let seenMin: string | null = null
 let seenUrl: string | null = null
 
 function captureUpdateHeaders(res: Response): void {
-  const latest = res.headers.get('x-ovoclaw-share-latest')
+  // Prefer the new x-siobac-* headers; fall back to legacy x-ovoclaw-* so the
+  // skill still reads update info from an older server that hasn't switched.
+  const latest = res.headers.get('x-siobac-share-latest') ?? res.headers.get('x-ovoclaw-share-latest')
   if (!latest) return // old server without the version hook — stay silent
   seenLatest = latest
-  seenMin = res.headers.get('x-ovoclaw-share-min')
-  seenUrl = res.headers.get('x-ovoclaw-share-update-url')
+  seenMin = res.headers.get('x-siobac-share-min') ?? res.headers.get('x-ovoclaw-share-min')
+  seenUrl = res.headers.get('x-siobac-share-update-url') ?? res.headers.get('x-ovoclaw-share-update-url')
 }
 
 // a < b for dotted numeric versions (e.g. '0.2.0' < '0.10.1'). Non-numeric or
@@ -113,8 +116,8 @@ export function getSkillUpdateNotice(): SkillUpdateNotice | null {
     required,
     update_url: seenUrl,
     message: required
-      ? 'This ovoclaw skill is older than the server\'s minimum supported version and may misbehave — update it before relying on it.'
-      : 'A newer ovoclaw skill is available — tell the user they can update when convenient.',
+      ? 'This siobac skill is older than the server\'s minimum supported version and may misbehave — update it before relying on it.'
+      : 'A newer siobac skill is available — tell the user they can update when convenient.',
   }
 }
 
@@ -136,7 +139,7 @@ export async function getVersionStatus(): Promise<VersionStatus> {
   try {
     const res = await fetch(`${getApiBase()}/health`, {
       method: 'GET',
-      headers: { 'X-Ovoclaw-Share-Version': SKILL_VERSION },
+      headers: { 'X-Siobac-Share-Version': SKILL_VERSION },
     })
     captureUpdateHeaders(res)
     reachable = true
@@ -235,7 +238,7 @@ async function jsonFetch<T>(opts: FetchOpts): Promise<T> {
 }
 
 // ── OAuth Device Authorization (RFC 8628) ────────────────────────────
-// These endpoints don't exist on the OvOclaw server yet — Phase 2 work.
+// These endpoints don't exist on the Siobac server yet — Phase 2 work.
 // Calls will return code:server_not_ready until they're deployed.
 
 export interface DeviceCodeResponse {

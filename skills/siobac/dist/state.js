@@ -2,43 +2,50 @@ import { promises as fs, constants as fsConstants, readFileSync } from 'node:fs'
 import { homedir } from 'node:os';
 import { join, dirname } from 'node:path';
 import { randomBytes } from 'node:crypto';
-// Owner-side state lives under ~/.ovoclaw/. On a platform that runs MULTIPLE
-// agents under one home, a single shared ~/.ovoclaw/auth.json would let one
+// Owner-side state lives under ~/.siobac/. On a platform that runs MULTIPLE
+// agents under one home, a single shared ~/.siobac/auth.json would let one
 // agent's login OVERWRITE another's — silently re-binding it to the wrong
 // account (and then it never sees its own connect requests / messages).
 //
 // PER-AGENT ISOLATION via a LOCAL BINDING FILE. Every agent platform runs its
-// agents in their OWN working directory, so we scope state by a `.ovoclaw.json`
+// agents in their OWN working directory, so we scope state by a `.siobac.json`
 // file in that working dir (found by walking cwd → up to $HOME). It holds only
 // a NON-SECRET pointer { agent_key } — never tokens — and selects the private
-// folder ~/.ovoclaw/agents/<agent_key>/ where auth/agent/sessions live. `login`
+// folder ~/.siobac/agents/<agent_key>/ where auth/agent/sessions live. `login`
 // and `connect` auto-create the file on first use, so two agents in two working
 // dirs get two folders and can never touch each other's login. An explicit
-// OVOCLAW_AGENT_KEY env var overrides the file; with NEITHER, we fall back to
-// the shared ~/.ovoclaw default (single-agent installs, unchanged).
-export const STATE_BASE = join(homedir(), '.ovoclaw');
-// Where state lived before the skill was renamed ovoclaw-share → ovoclaw.
+// SIOBAC_AGENT_KEY env var overrides the file; with NEITHER, we fall back to
+// the shared ~/.siobac default (single-agent installs, unchanged).
+export const STATE_BASE = join(homedir(), '.siobac');
+// Where state lived before the rename to Siobac (ovoclaw → siobac).
 // migrateLegacyState() copies an existing login over on first run so users
 // don't have to log in again after the rename.
-export const LEGACY_STATE_BASE = join(homedir(), '.ovoclaw-share');
+export const LEGACY_STATE_BASE = join(homedir(), '.ovoclaw');
 // The local per-working-directory pointer file (no secrets — just agent_key).
-export const BINDING_FILENAME = '.ovoclaw.json';
+// Legacy `.ovoclaw.json` bindings are still honored (read-only) so existing
+// working dirs don't lose their agent after the rename.
+export const BINDING_FILENAME = '.siobac.json';
+export const LEGACY_BINDING_FILENAME = '.ovoclaw.json';
 function sanitizeKey(k) {
     return k.replace(/[^a-zA-Z0-9_.-]/g, '_').slice(0, 64);
 }
-// Nearest .ovoclaw.json carrying a usable agent_key, walking cwd up to $HOME.
+// Nearest .siobac.json (or legacy .ovoclaw.json) carrying a usable agent_key,
+// walking cwd up to $HOME. The new filename wins at each level; the legacy name
+// is honored so existing bindings survive the rename.
 function findBindingFile() {
     const home = homedir();
     let d = process.cwd();
     for (let i = 0; i < 40; i++) {
-        const candidate = join(d, BINDING_FILENAME);
-        try {
-            const parsed = JSON.parse(readFileSync(candidate, 'utf8'));
-            const key = sanitizeKey(String(parsed?.agent_key ?? '').trim());
-            if (key)
-                return { path: candidate, key };
+        for (const name of [BINDING_FILENAME, LEGACY_BINDING_FILENAME]) {
+            const candidate = join(d, name);
+            try {
+                const parsed = JSON.parse(readFileSync(candidate, 'utf8'));
+                const key = sanitizeKey(String(parsed?.agent_key ?? '').trim());
+                if (key)
+                    return { path: candidate, key };
+            }
+            catch { /* missing or malformed — try the next name / walk up */ }
         }
-        catch { /* missing or malformed — keep walking up */ }
         if (d === home)
             break;
         const parent = dirname(d);
@@ -55,7 +62,7 @@ let _pinnedKey = null;
 function resolveAgentKey() {
     if (_pinnedKey !== null)
         return _pinnedKey;
-    const env = (process.env.OVOCLAW_AGENT_KEY ?? '').trim();
+    const env = (process.env.SIOBAC_AGENT_KEY ?? process.env.OVOCLAW_AGENT_KEY ?? '').trim();
     if (env)
         return sanitizeKey(env);
     const bf = findBindingFile();
@@ -67,11 +74,11 @@ function stateDirFor(key) {
 // State dir for the current run (env key > local binding file > shared default).
 export function stateDir() { return stateDirFor(resolveAgentKey()); }
 // Resolve the per-agent binding. When `create` is true and nothing is bound yet,
-// CREATE a fresh .ovoclaw.json in the current working directory so this agent
+// CREATE a fresh .siobac.json in the current working directory so this agent
 // gets its OWN isolated folder. login/connect pass create=true; read-only
 // callers (doctor) pass false.
 export async function ensureAgentBinding(create) {
-    const env = (process.env.OVOCLAW_AGENT_KEY ?? '').trim();
+    const env = (process.env.SIOBAC_AGENT_KEY ?? process.env.OVOCLAW_AGENT_KEY ?? '').trim();
     if (env) {
         const key = sanitizeKey(env);
         _pinnedKey = key;
@@ -94,7 +101,7 @@ export async function ensureAgentBinding(create) {
     const body = {
         agent_key: key,
         created_at: new Date().toISOString(),
-        note: "OvOclaw per-agent binding. Points to the private ~/.ovoclaw/agents/<agent_key>/ folder that holds THIS agent's login — contains no secrets. Keep one per agent working directory; delete to unbind.",
+        note: "Siobac per-agent binding. Points to the private ~/.siobac/agents/<agent_key>/ folder that holds THIS agent's login — contains no secrets. Keep one per agent working directory; delete to unbind.",
     };
     try {
         await fs.writeFile(path, JSON.stringify(body, null, 2), { mode: 0o600 });
@@ -360,10 +367,10 @@ export async function updateSession(handle, patch) {
     return all[handle];
 }
 export function newSessionHandle() { return 's_' + randomBytes(8).toString('hex'); }
-// One-time migration after the ovoclaw-share → ovoclaw rename: if the new state
-// dir has no auth yet but the legacy ~/.ovoclaw-share equivalent does, copy the
-// login (auth/agent/sessions) over so the user stays logged in. No-op once
-// migrated, for fresh users, or when there's nothing legacy to copy.
+// One-time migration after the ovoclaw → siobac rename: if the new ~/.siobac
+// state dir has no auth yet but the legacy ~/.ovoclaw equivalent does, copy the
+// login (auth/agent/sessions) over so the user stays logged in (no re-login
+// after the rename). No-op once migrated, for fresh users, or nothing to copy.
 export async function migrateLegacyState() {
     const target = dir();
     try {

@@ -1,4 +1,4 @@
-# ovoclaw — errors & output contract
+# siobac — errors & output contract
 
 ## Output contract
 
@@ -23,12 +23,12 @@
 | `slow_down` | Device flow: polling too fast | Same as pending — wait for the user, don't loop `login --finish` |
 | `access_denied` | Device flow: user denied | Stop; user must initiate again |
 | `expired_token` | Device flow: user_code expired | Run `login` again |
-| `server_not_ready` | Server has no device-flow endpoints | Check `OVOCLAW_API_BASE` |
+| `server_not_ready` | Server has no device-flow endpoints | Check `SIOBAC_API_BASE` |
 | `forbidden` | Token lacks scope, or not the owner | Tell user; cannot retry |
 | `not_found` | Agent / connection / invite gone | Tell user |
 | `rate_limited` | Too many requests | Wait; don't retry aggressively |
-| `network_error` | fetch failed | Retry later; check `OVOCLAW_API_BASE` |
-| `server_error` | OvOclaw returned 5xx | Retry later |
+| `network_error` | fetch failed | Retry later; check `SIOBAC_API_BASE` |
+| `server_error` | Siobac returned 5xx | Retry later |
 | `not_implemented_yet` | Skill-side command not built | Shouldn't occur (all wired); treat as a bug |
 | `cli_error` | Local CLI input error | Read `error`; fix and retry |
 | `unknown` | Catch-all | Treat as `server_error` |
@@ -40,9 +40,9 @@ version:
 
 ```json
 "skill_update": { "current": "0.9.31", "latest": "0.9.34", "required": false,
-                  "update_url": "https://github.com/CammyStory/ovoclaw-skills-playground",
-                  "skill_path": "/path/to/skills/ovoclaw",
-                  "how_to_update": "To update: pull the latest from … then replace this installed copy at /path/to/skills/ovoclaw …",
+                  "update_url": "https://github.com/CammyStory/siobac-skills-playground",
+                  "skill_path": "/path/to/skills/siobac",
+                  "how_to_update": "To update: pull the latest from … then replace this installed copy at /path/to/skills/siobac …",
                   "message": "..." }
 ```
 

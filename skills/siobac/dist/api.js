@@ -1,4 +1,4 @@
-// HTTP client for the OvOclaw owner-side API + OAuth Device Authorization
+// HTTP client for the Siobac owner-side API + OAuth Device Authorization
 // endpoints. Every public function here normalizes server errors into the
 // same ApiError shape so the CLI layer can emit a stable `code` field for
 // agents to branch on.
@@ -15,21 +15,24 @@ export function makeApiError(code, message, extras = {}) {
 // This is the TEST/playground build: it targets the dev environment (the /dev
 // tunnel to the local server) so testing never touches public production data.
 // The polished public release points at https://api.ovoclaw.com instead.
-// Override anytime with OVOCLAW_API_BASE.
+// (The Siobac brand keeps the ovoclaw.com backend domain.) Override anytime with
+// SIOBAC_API_BASE (legacy OVOCLAW_API_BASE still honored).
 const DEFAULT_API_BASE = 'https://ovo.ovoclaw.com/dev';
 export function getApiBase() {
-    return process.env.OVOCLAW_API_BASE ?? DEFAULT_API_BASE;
+    return process.env.SIOBAC_API_BASE ?? process.env.OVOCLAW_API_BASE ?? DEFAULT_API_BASE;
 }
 let seenLatest = null;
 let seenMin = null;
 let seenUrl = null;
 function captureUpdateHeaders(res) {
-    const latest = res.headers.get('x-ovoclaw-share-latest');
+    // Prefer the new x-siobac-* headers; fall back to legacy x-ovoclaw-* so the
+    // skill still reads update info from an older server that hasn't switched.
+    const latest = res.headers.get('x-siobac-share-latest') ?? res.headers.get('x-ovoclaw-share-latest');
     if (!latest)
         return; // old server without the version hook — stay silent
     seenLatest = latest;
-    seenMin = res.headers.get('x-ovoclaw-share-min');
-    seenUrl = res.headers.get('x-ovoclaw-share-update-url');
+    seenMin = res.headers.get('x-siobac-share-min') ?? res.headers.get('x-ovoclaw-share-min');
+    seenUrl = res.headers.get('x-siobac-share-update-url') ?? res.headers.get('x-ovoclaw-share-update-url');
 }
 // a < b for dotted numeric versions (e.g. '0.2.0' < '0.10.1'). Non-numeric or
 // missing parts read as 0, so it degrades gracefully on odd inputs.
@@ -59,8 +62,8 @@ export function getSkillUpdateNotice() {
         required,
         update_url: seenUrl,
         message: required
-            ? 'This ovoclaw skill is older than the server\'s minimum supported version and may misbehave — update it before relying on it.'
-            : 'A newer ovoclaw skill is available — tell the user they can update when convenient.',
+            ? 'This siobac skill is older than the server\'s minimum supported version and may misbehave — update it before relying on it.'
+            : 'A newer siobac skill is available — tell the user they can update when convenient.',
     };
 }
 export async function getVersionStatus() {
@@ -68,7 +71,7 @@ export async function getVersionStatus() {
     try {
         const res = await fetch(`${getApiBase()}/health`, {
             method: 'GET',
-            headers: { 'X-Ovoclaw-Share-Version': SKILL_VERSION },
+            headers: { 'X-Siobac-Share-Version': SKILL_VERSION },
         });
         captureUpdateHeaders(res);
         reachable = true;

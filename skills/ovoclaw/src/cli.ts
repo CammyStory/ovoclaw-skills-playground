@@ -750,15 +750,55 @@ async function cmdAutoStart(flags: Record<string, string | true>) {
   assertInboundConn(connectionId)
   const purpose = requireString(flags, 'purpose', 'auto-start')
   const maxTurns = optionalString(flags, 'max-turns')
+  // --draft = oversight mode: the agent DRAFTS each reply and waits for the owner
+  // to approve (auto-approve) before it sends. Default is full auto (sends直接).
+  const draft = flags.draft === true || flags.draft === 'true'
+  const mode = draft ? 'draft' : 'auto'
   const { auth, agentId } = await requireBoundAgent()
-  const s = await api.autoStart(auth.accessToken, agentId, connectionId, purpose, maxTurns !== undefined ? Number(maxTurns) : undefined)
+  const s = await api.autoStart(auth.accessToken, agentId, connectionId, purpose, maxTurns !== undefined ? Number(maxTurns) : undefined, mode)
   ok({
     status: 'auto_started',
     conversation: connectionId,
-    auto: { status: s.status, purpose: s.purpose, turn_count: s.turn_count, max_turns: s.max_turns },
-    note: 'Auto-response is ON for this conversation. From now on, when this person messages, your agent composes + sends a reply on its own (in character, toward the purpose) — you do NOT run `send`. It stops automatically when the goal is met or after the turn cap.',
-    next_step: `Watch it with \`auto-status --conversation ${connectionId}\` and read the exchange with \`read --conversation ${connectionId}\`. To take over manually, run \`auto-stop --conversation ${connectionId}\` then reply with \`send\`.`,
-    tell_owner: "Got it — I'll handle this conversation automatically and reply on your behalf to get the result. I'll keep going until it's sorted; tell me to stop anytime and I'll hand it back to you.",
+    mode,
+    auto: { status: s.status, mode: s.mode, purpose: s.purpose, turn_count: s.turn_count, max_turns: s.max_turns },
+    warning: s.warning,
+    note: draft
+      ? 'Draft (oversight) mode is ON for this conversation. When this person messages, your agent DRAFTS a reply (in character, toward the purpose) and HOLDS it — nothing is sent until you approve it. Pending drafts show up on every `check`; approve with `auto-approve` (optionally `--edit`).'
+      : 'Auto-response is ON for this conversation. When this person messages, your agent composes + sends a reply on its own (in character, toward the purpose) — you do NOT run `send`. It stops automatically when the goal is met or after the turn cap, and the outcome is reported back to you on your next `check`.',
+    next_step: draft
+      ? `Watch for drafts with \`check\` or \`auto-status --conversation ${connectionId}\`, then \`auto-approve --conversation ${connectionId} [--edit "<your version>"]\` to send each one. Switch to full auto by re-running \`auto-start\` without \`--draft\`. Stop with \`auto-stop --conversation ${connectionId}\`.`
+      : `Watch it with \`auto-status --conversation ${connectionId}\` and read the exchange with \`read --conversation ${connectionId}\`. To STEER it mid-conversation, re-run \`auto-start\` with a new \`--purpose\`. To take over manually, \`auto-stop --conversation ${connectionId}\` then \`send\`.`,
+    tell_owner: (s.warning ? s.warning + ' ' : '') + (draft
+      ? "I'll draft each reply on your behalf toward the goal and show it to you to approve (or tweak) before it sends — nothing goes out without your OK."
+      : "I'll handle this conversation automatically and reply on your behalf to get the result, and report back what happens. Tell me to stop anytime and I'll hand it back to you."),
+  })
+}
+
+async function cmdAutoApprove(flags: Record<string, string | true>) {
+  const connectionId = requireString(flags, 'conversation', 'auto-approve')
+  const edited = optionalString(flags, 'edit')
+  const { auth, agentId } = await requireBoundAgent()
+  const s = await api.autoApprove(auth.accessToken, agentId, connectionId, edited)
+  if (s.status === 'none') {
+    ok({ status: 'not_running', conversation: connectionId, note: 'No auto-response session is running on this conversation — nothing to approve.' })
+    return
+  }
+  if (s.status === 'no_draft') {
+    ok({ status: 'no_draft', conversation: connectionId, note: 'No reply is waiting for approval right now. A draft appears after this person messages; check again then.' })
+    return
+  }
+  const finished = s.status !== 'running'
+  ok({
+    status: 'approved',
+    conversation: connectionId,
+    edited: edited !== undefined,
+    auto: { status: s.status, mode: s.mode, turn_count: s.turn_count, max_turns: s.max_turns, result_summary: s.result_summary },
+    note: finished
+      ? `Reply sent — and this wrapped up the conversation (${s.reason || s.status}).${s.result_summary ? ` Result: ${s.result_summary}` : ''}`
+      : 'Reply sent. Draft mode is still on — when they reply, your agent will draft the next one for you to approve.',
+    tell_owner: finished
+      ? `Sent.${s.result_summary ? ` ${s.result_summary}` : ' That wrapped things up.'}`
+      : 'Sent that one for you. I\'ll draft the next reply when they respond.',
   })
 }
 
@@ -782,9 +822,14 @@ async function cmdAutoStatus(flags: Record<string, string | true>) {
   const connectionId = requireString(flags, 'conversation', 'auto-status')
   const { auth, agentId } = await requireBoundAgent()
   const s = await api.autoStatus(auth.accessToken, agentId, connectionId)
+  const hasDraft = s.status === 'running' && s.mode === 'draft' && !!s.pending_draft
   const note =
     s.status === 'running'
-      ? `Auto-response is running (${s.turn_count ?? 0} repl${(s.turn_count ?? 0) === 1 ? 'y' : 'ies'} sent so far). Read the exchange with \`read --conversation ${connectionId}\`.`
+      ? hasDraft
+        ? `Draft mode: a reply is waiting for your approval — "${s.pending_draft}". Approve with \`auto-approve --conversation ${connectionId} [--edit "<your version>"]\`.`
+        : s.mode === 'draft'
+          ? `Draft mode is on (${s.turn_count ?? 0} sent so far). No reply is pending right now — one will be drafted when this person next messages.`
+          : `Auto-response is running (${s.turn_count ?? 0} repl${(s.turn_count ?? 0) === 1 ? 'y' : 'ies'} sent so far). Read the exchange with \`read --conversation ${connectionId}\`.`
       : s.status === 'none'
         ? 'No auto-response has been started on this conversation.'
         : `Auto-response ${s.status}${s.reason ? ` (${s.reason})` : ''}.${s.result_summary ? ` Result: ${s.result_summary}` : ''}`
@@ -982,6 +1027,34 @@ async function cmdCheck(_flags: Record<string, string | true>) {
   if (auth && auth.agentId) {
     const inbox = await api.fetchInbox(auth.accessToken)
     result.inbound = { pending_requests: inbox.pending_requests, threads: inbox.threads, unanswered_count: inbox.new_messages.length }
+    // Report-back (#1): auto-conversations that FINISHED on their own while the
+    // owner was away — surface the outcome once so the agent can relay it.
+    try {
+      const updates = await api.autoUpdates(auth.accessToken, auth.agentId)
+      if (updates.length) {
+        result.auto_updates = updates
+        const label = (u: api.AutoUpdate) =>
+          u.status === 'failed' ? 'hit an error'
+          : u.status === 'stalled' ? 'timed out waiting'
+          : u.reason === 'max_turns_reached' ? 'reached the reply limit (not fully resolved)'
+          : 'wrapped up'
+        result.auto_updates_note =
+          `${updates.length} auto-conversation${updates.length === 1 ? '' : 's'} finished — tell the owner the outcome: ` +
+          updates.map(u => `(${label(u)}) ${u.result_summary || u.reason || ''}`).join(' · ')
+      }
+    } catch { /* report-back is best-effort; never sink check over it */ }
+    // Draft (oversight) mode (#5): replies waiting for the owner's approval.
+    // Recurring (unlike auto_updates) — surface every check until handled.
+    try {
+      const drafts = await api.autoDrafts(auth.accessToken, auth.agentId)
+      if (drafts.length) {
+        result.pending_drafts = drafts
+        result.pending_drafts_note =
+          `${drafts.length} drafted repl${drafts.length === 1 ? 'y is' : 'ies are'} waiting for your approval — show each to the owner; approve with ` +
+          `\`auto-approve --conversation <id>\` (or \`--edit "<your version>"\`): ` +
+          drafts.map(d => `[${d.connection_id}] "${d.draft}"`).join(' · ')
+      }
+    } catch { /* best-effort; never sink check */ }
   } else {
     result.inbound = { note: 'not logged in — only outbound (guest) conversations checked' }
   }
@@ -1058,9 +1131,9 @@ const GUIDE_STEPS = [
   {
     step: 'auto_respond',
     when: "the owner wants you to handle a conversation FOR them — \"just deal with it / find out X / set up Y with them\" — instead of approving each reply",
-    do: "Confirm the GOAL in one line and that they're OK with you replying automatically, then start it. The server then composes + sends each reply in character toward the purpose until it's met or you stop — you do NOT run `send` per turn. Check progress and hand back anytime.",
-    commands: ['auto-start --conversation <inbound id> --purpose "<goal>"', 'auto-status --conversation <id>', 'read --conversation <id>', 'auto-stop --conversation <id>'],
-    tell_owner: "Want me to just handle this with [friend] and reply on your behalf until [goal]? I'll keep you posted and you can stop me anytime.",
+    do: "Confirm the GOAL in one line and how hands-on they want to be. FULL AUTO (`auto-start`): the server composes + sends each reply in character toward the purpose until it's met or you stop — you do NOT run `send` per turn. OVERSIGHT (`auto-start --draft`): the agent DRAFTS each reply and waits — nothing sends until you `auto-approve` it (optionally `--edit`); pending drafts surface on every `check`. Use draft for sensitive chats. Check progress and hand back anytime.",
+    commands: ['auto-start --conversation <inbound id> --purpose "<goal>" [--draft]', 'check', 'auto-approve --conversation <id> [--edit "<text>"]', 'auto-status --conversation <id>', 'auto-stop --conversation <id>'],
+    tell_owner: "Want me to handle this with [friend] toward [goal]? I can reply on your behalf automatically, or draft each reply for you to approve first — which do you prefer?",
   },
   {
     step: 'reach_out',
@@ -1138,9 +1211,10 @@ function cmdHelp(): never {
       { name: 'forget-session', description: 'Forget an outbound conversation locally. --conversation <handle>' },
       { name: 'recall', description: 'Read-before-talk: your private directive + public profile + your memory of this friend. --conversation <handle>' },
       { name: 'remember', description: 'Write-after-talk: persist friend-scoped memory. --conversation <handle> [--deltas \'[{"kind","content","disclosure?"}]\'] [--summary "<rolling summary>"]' },
-      { name: 'auto-start', description: 'Hand a conversation off to auto-reply: the agent composes + sends each reply on your behalf toward a goal. --conversation <inbound id> --purpose "<what to achieve>" [--max-turns N]. Confirm with the owner first; stop anytime with auto-stop' },
+      { name: 'auto-start', description: 'Hand a conversation off to auto-reply: the agent composes + sends each reply on your behalf toward a goal. --conversation <inbound id> --purpose "<what to achieve>" [--max-turns N] [--draft]. With --draft (oversight mode) it DRAFTS each reply and waits for auto-approve instead of sending. Confirm with the owner first; stop anytime with auto-stop' },
+      { name: 'auto-approve', description: 'Draft (oversight) mode: send the reply the agent drafted, optionally edited first. --conversation <id> [--edit "<your version>"]. Pending drafts are listed by `check`' },
       { name: 'auto-stop', description: 'Stop auto-reply on a conversation and hand back to manual. --conversation <id>' },
-      { name: 'auto-status', description: 'Auto-reply state for a conversation (running/done/interrupted/…, turns sent, result). --conversation <id>' },
+      { name: 'auto-status', description: 'Auto-reply state for a conversation (running/done/interrupted/…, mode, turns sent, any pending draft, result). --conversation <id>' },
       { name: 'get-profile', description: 'Show this agent\'s public profile (name/description/avatar) + its directive + setup state (new vs existing)' },
       { name: 'set-profile', description: 'Edit the PUBLIC profile others read. --description "<who you are / what you discuss>" [--name "<name>"]' },
       { name: 'get-directive', description: 'Read your private directive (owner-only; the rules/purpose driving how you reply)' },
@@ -1217,6 +1291,7 @@ async function main() {
     case 'recall':            return cmdRecall(flags)
     case 'remember':          return cmdRemember(flags)
     case 'auto-start':        return cmdAutoStart(flags)
+    case 'auto-approve':      return cmdAutoApprove(flags)
     case 'auto-stop':         return cmdAutoStop(flags)
     case 'auto-status':       return cmdAutoStatus(flags)
     case 'get-profile':       return cmdGetProfile(flags)

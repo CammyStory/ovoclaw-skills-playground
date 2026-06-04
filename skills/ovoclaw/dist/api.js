@@ -308,13 +308,31 @@ export async function submitMemory(bearer, agentId, connectionId, deltas) {
         body: { memory_deltas: deltas },
     });
 }
-export async function autoStart(bearer, agentId, connectionId, purpose, maxTurns) {
+export async function autoStart(bearer, agentId, connectionId, purpose, maxTurns, mode) {
     return jsonFetch({
         method: 'POST',
         path: `/agents/${encodeURIComponent(agentId)}/external-connections/${encodeURIComponent(connectionId)}/auto-start`,
         bearer,
-        body: { purpose, ...(maxTurns !== undefined ? { max_turns: maxTurns } : {}) },
+        body: { purpose, ...(maxTurns !== undefined ? { max_turns: maxTurns } : {}), ...(mode ? { mode } : {}) },
     });
+}
+// Draft mode: approve (optionally edited) the reply the agent drafted, sending
+// it and advancing the session.
+export async function autoApprove(bearer, agentId, connectionId, edited) {
+    return jsonFetch({
+        method: 'POST',
+        path: `/agents/${encodeURIComponent(agentId)}/external-connections/${encodeURIComponent(connectionId)}/auto-approve`,
+        bearer,
+        ...(edited !== undefined ? { body: { edited } } : {}),
+    });
+}
+export async function autoDrafts(bearer, agentId) {
+    const r = await jsonFetch({
+        method: 'GET',
+        path: `/agents/${encodeURIComponent(agentId)}/auto-drafts`,
+        bearer,
+    });
+    return r.drafts;
 }
 export async function autoStop(bearer, agentId, connectionId) {
     return jsonFetch({
@@ -329,6 +347,14 @@ export async function autoStatus(bearer, agentId, connectionId) {
         path: `/agents/${encodeURIComponent(agentId)}/external-connections/${encodeURIComponent(connectionId)}/auto-status`,
         bearer,
     });
+}
+export async function autoUpdates(bearer, agentId) {
+    const r = await jsonFetch({
+        method: 'GET',
+        path: `/agents/${encodeURIComponent(agentId)}/auto-updates`,
+        bearer,
+    });
+    return r.updates;
 }
 function classifyInviteStatus(status, body) {
     if (status === 400)

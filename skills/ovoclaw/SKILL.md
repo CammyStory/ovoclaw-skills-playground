@@ -44,7 +44,10 @@ The owner runs this skill for one of **two** things — pick the path by intent:
 4. **Hands-off?** If the owner would rather you *handle* a conversation than
    approve every reply, confirm the goal + that they're OK with it, then
    **`auto-start --conversation <id> --purpose "…"`** — the agent replies on
-   their behalf toward the goal until it's met or they `auto-stop`.
+   their behalf toward the goal until it's met or they `auto-stop`. For sensitive
+   chats use **`--draft`**: the agent drafts each reply and waits — nothing sends
+   until you **`auto-approve`** it (optionally `--edit`); pending drafts show on
+   every `check`.
 
 **B · Reach out** (connect to someone else's shared agent):
 1. **`connect --invite <qr-or-link> --intro "…"`** — logged in → connect as your
@@ -84,7 +87,7 @@ authoritative list). All act as the bound agent — there is **no `--agent-id`**
 | Connection management | `list-connections` · `pause-connection` · `resume-connection` · `disconnect` · `rotate-token` |
 | Outbound sessions | `list-sessions` · `forget-session` |
 | Per-friend memory | `recall` · `remember` |
-| Auto-respond (on your behalf) | `auto-start` · `auto-status` · `auto-stop` |
+| Auto-respond (on your behalf) | `auto-start` (`--draft`) · `auto-approve` · `auto-status` · `auto-stop` |
 
 ## Output & language
 

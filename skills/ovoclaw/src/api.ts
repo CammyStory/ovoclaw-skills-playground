@@ -609,30 +609,69 @@ export async function submitMemory(
 // event-driven loop composes (LLM) + sends each reply IN CHARACTER on the
 // owner's behalf, toward the purpose, until it's met / capped / the owner stops.
 // Owner-side, one inbound connection at a time.
+// mode: 'auto' = compose + SEND each reply directly; 'draft' = hold each reply
+// for the owner to approve (auto-approve) before it sends.
+export type AutoMode = 'auto' | 'draft'
 export interface AutoSession {
   id?: string
   connection_id?: string
   agent_id?: string
   purpose?: string
-  status: 'running' | 'done' | 'interrupted' | 'stalled' | 'failed' | 'none'
+  status: 'running' | 'done' | 'interrupted' | 'stalled' | 'failed' | 'none' | 'no_draft'
+  mode?: AutoMode
   turn_count?: number
   max_turns?: number
   result_summary?: string | null
   reason?: string | null
+  // Draft mode: the reply waiting for approval (auto-status surfaces it too).
+  pending_draft?: string | null
+  pending_draft_done?: number
   created_at?: string
   updated_at?: string
   last_tick_at?: string | null
+  warning?: string   // e.g. relay-backed agent (auto only fills in while offline)
 }
 
 export async function autoStart(
-  bearer: string, agentId: string, connectionId: string, purpose: string, maxTurns?: number,
+  bearer: string, agentId: string, connectionId: string, purpose: string, maxTurns?: number, mode?: AutoMode,
 ): Promise<AutoSession> {
   return jsonFetch<AutoSession>({
     method: 'POST',
     path: `/agents/${encodeURIComponent(agentId)}/external-connections/${encodeURIComponent(connectionId)}/auto-start`,
     bearer,
-    body: { purpose, ...(maxTurns !== undefined ? { max_turns: maxTurns } : {}) },
+    body: { purpose, ...(maxTurns !== undefined ? { max_turns: maxTurns } : {}), ...(mode ? { mode } : {}) },
   })
+}
+
+// Draft mode: approve (optionally edited) the reply the agent drafted, sending
+// it and advancing the session.
+export async function autoApprove(
+  bearer: string, agentId: string, connectionId: string, edited?: string,
+): Promise<AutoSession> {
+  return jsonFetch<AutoSession>({
+    method: 'POST',
+    path: `/agents/${encodeURIComponent(agentId)}/external-connections/${encodeURIComponent(connectionId)}/auto-approve`,
+    bearer,
+    ...(edited !== undefined ? { body: { edited } } : {}),
+  })
+}
+
+// Recurring report: draft-mode replies waiting for owner approval, across the
+// bound agent's connections. `check` surfaces these every time until handled.
+export interface AutoDraft {
+  connection_id: string
+  purpose: string
+  turn_count: number
+  draft: string
+  would_finalize: boolean
+}
+export async function autoDrafts(bearer: string, agentId: string): Promise<AutoDraft[]> {
+  const r = await jsonFetch<{ drafts: AutoDraft[] }>({
+    method: 'GET',
+    path: `/agents/${encodeURIComponent(agentId)}/auto-drafts`,
+    bearer,
+  })
+  return r.drafts
 }
 export async function autoStop(bearer: string, agentId: string, connectionId: string): Promise<AutoSession> {
   return jsonFetch<AutoSession>({
@@ -647,6 +686,26 @@ export async function autoStatus(bearer: string, agentId: string, connectionId: 
     path: `/agents/${encodeURIComponent(agentId)}/external-connections/${encodeURIComponent(connectionId)}/auto-status`,
     bearer,
   })
+}
+
+// Report-back: finished auto-sessions the owner hasn't been shown yet (drains
+// them, each surfaced once). `check` calls this so the agent can tell the owner
+// the outcome of an auto-conversation that ran while they were away.
+export interface AutoUpdate {
+  connection_id: string
+  status: 'done' | 'stalled' | 'failed'
+  purpose?: string
+  turn_count?: number
+  result_summary?: string | null
+  reason?: string | null
+}
+export async function autoUpdates(bearer: string, agentId: string): Promise<AutoUpdate[]> {
+  const r = await jsonFetch<{ updates: AutoUpdate[] }>({
+    method: 'GET',
+    path: `/agents/${encodeURIComponent(agentId)}/auto-updates`,
+    bearer,
+  })
+  return r.updates
 }
 
 // ── Reach-out transport (active connect) ─────────────────────────────

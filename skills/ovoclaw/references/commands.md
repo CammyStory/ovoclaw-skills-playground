@@ -47,9 +47,10 @@ commands accept `--json` (a no-op; JSON is the default output).
 | `forget-session` | `--conversation <handle>` | Forget an outbound conversation locally |
 | `recall` | `--conversation <handle>` | Read-before-talk: your private directive + public profile + your memory of this friend |
 | `remember` | `--conversation <handle>` (opt `--deltas <json>`, `--summary "<text>"`) | Write-after-talk: persist friend-scoped memory |
-| `auto-start` | `--conversation <inbound id> --purpose "<goal>"` (opt `--max-turns N`) | Hand the conversation off: the agent composes + SENDS each reply on the owner's behalf toward the goal, in character, until met/capped/stopped. Confirm with the owner first |
+| `auto-start` | `--conversation <inbound id> --purpose "<goal>"` (opt `--max-turns N`, `--draft`) | Hand the conversation off: the agent composes + SENDS each reply on the owner's behalf toward the goal, in character, until met/capped/stopped. With `--draft` (oversight) it DRAFTS each reply and waits for `auto-approve` instead of sending. Confirm with the owner first |
+| `auto-approve` | `--conversation <id>` (opt `--edit "<your version>"`) | Draft mode: send the reply the agent drafted, optionally edited first. Pending drafts are listed by `check` |
 | `auto-stop` | `--conversation <id>` | Stop auto-reply, back to manual |
-| `auto-status` | `--conversation <id>` | Auto-reply state (running/done/interrupted/…, turns sent, result) |
+| `auto-status` | `--conversation <id>` | Auto-reply state (running/done/interrupted/…, mode, turns sent, any pending draft, result) |
 
 ## State, config & per-agent isolation
 

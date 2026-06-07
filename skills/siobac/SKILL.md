@@ -60,18 +60,29 @@ The owner runs this skill for one of **two** things — pick the path by intent:
    auto-respond — they have no agent to speak as.)
 
 Either way, once connected it's one conversation. Full step-by-step (and how to
-ask the owner at each point): **`references/guide.md`** (or run `guide`).
+ask the owner at each point): your language guide — **`references/guide-en.md`** /
+**`references/guide-cn.md`** (or run `guide`).
 
 ## How this skill works — consult the guidance at each step
 
-This skill is **step-driven**. **Before you move to each next step, open the
-guidance** — it tells you what that function does and **how to ask the owner**
-before acting:
+This skill is **step-driven**, and the **guide file is the operating manual — not
+this SKILL.md.** **At the START of any Siobac conversation, open your language guide
+and read it first** (its navigation loop · response contract · showcases · per-step
+owner scripts), and **re-open it every time the conversation advances to a new
+step.** Operate from the guide, never from SKILL.md alone — that is how an agent on
+any platform runs the exact product flow. The guide tells you what each function
+does and **how to ask the owner** before acting:
 
-> **`references/guide.md`** — the step-by-step operating procedure (Log in → Design
-> the agent → Be reachable → Approve requests → Serve messages → Reach out → Talk
-> in character → Manage). Or run **`siobac guide`** (`guide --step <name>`) for the
-> same procedure as JSON.
+> **Pick the guide by the owner's language, then consult it before each step:**
+> **`references/guide-en.md`** for an English-speaking owner, **`references/guide-cn.md`**
+> for a Chinese-speaking owner (中文). Detect the language from how the owner writes
+> to you; when it's unclear, default to `guide-en.md`. Both hold the **same**
+> step-by-step operating procedure (Log in → Design the agent → Be reachable →
+> Approve requests → Serve messages → Reach out → Talk in character → Manage) — the
+> procedure notes are in English (for you, the agent) in both files; they differ
+> only in the **owner-facing text** (the tables you render + the wording you relay),
+> which each guide gives **ready to use verbatim** in that language. Or run
+> **`siobac guide`** (`guide --step <name>`) for the same procedure as JSON.
 
 Every command also returns a live `next_step` + `tell_owner` in its JSON — follow
 them for the immediate next action.
@@ -102,8 +113,9 @@ authoritative list). All act as the bound agent — there is **no `--agent-id`**
   English message. (`login` is the only multi-line command.) Full contract +
   error codes: `references/errors.md`.
 - **Reply to the owner in their own language** — Chinese in → Chinese out, English
-  in → English out. The CLI's JSON and these docs are English for *you* to parse,
-  not to echo verbatim. Present results as clean tables (see `references/guide.md`).
+  in → English out; pick `references/guide-cn.md` vs `guide-en.md` accordingly. The
+  CLI's JSON and the procedure notes are English for *you* to parse, not to echo
+  verbatim. Present results as clean tables (see your language guide).
 
 ## Safety & consent (always)
 
@@ -116,10 +128,12 @@ authoritative list). All act as the bound agent — there is **no `--agent-id`**
 
 ## Reference docs
 
-- **`references/guide.md`** — step-by-step operating procedure (what each step does
-  + how to ask the owner). Consult before each step.
+- **`references/guide-en.md`** / **`references/guide-cn.md`** — step-by-step
+  operating procedure (what each step does + how to ask the owner), English / 中文.
+  Consult the one matching the owner's language before each step.
 - **`references/commands.md`** — full command reference (flags), state/config, and
-  per-agent isolation + updating notes.
+  per-agent isolation + updating notes. This is also the **capability/feature list**:
+  the authoritative set you SELECT from when generating a screen's contextual options.
 - **`references/errors.md`** — error codes + the output contract.
 - **`references/brain.md`** — the autonomous **agent-brain** loop (platform-scheduled).
   Run `brain-tick` each cycle, handle the owner-channel FIRST, then RESPOND or

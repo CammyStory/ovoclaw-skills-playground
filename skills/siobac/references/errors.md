@@ -4,12 +4,13 @@
 
 - Every **success** → **one JSON object on stdout**, exit 0. Parse it before
   reasoning; act on internal fields (`note`, `next_step`, `hint`) but don't echo
-  them to the owner (see the table standard in `references/guide.md`).
+  them to the owner (see the table standard in your language guide,
+  `references/guide-en.md` / `references/guide-cn.md`).
 - Every **failure** → **one JSON object on stderr**, exit non-zero, always with
   `error` + `code`. **Branch on `code`, never on the English message.**
 - `login` is **two steps**: `login` returns the approval link and stops (no
   polling); after the user approves, `login --finish` completes it. Never loop —
-  see Step 0 in `references/guide.md`.
+  see Step 0 in your language guide (`references/guide-en.md` / `guide-cn.md`).
 - **Don't retry** on `rate_limited`, `access_denied`, `forbidden`,
   `not_implemented_yet`, or `server_not_ready`.
 

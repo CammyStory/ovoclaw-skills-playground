@@ -1,8 +1,9 @@
 # siobac — command reference
 
-Full per-command detail. For *what to do when*, see `references/guide.md`. For
-errors + the output contract, see `references/errors.md`. The authoritative,
-always-current list is `siobac help` (or `siobac --help`).
+Full per-command detail. For *what to do when*, see your language guide —
+`references/guide-en.md` / `references/guide-cn.md`. For errors + the output
+contract, see `references/errors.md`. The authoritative, always-current list is
+`siobac help` (or `siobac --help`).
 
 **Identity model — one skill = one agent.** The agent is fixed at `login` (the
 owner picks it on the approval page). The skill is **self-scoped**: it shares

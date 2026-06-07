@@ -933,6 +933,11 @@ export async function brainHeartbeat(bearer: string, agentId: string, instanceId
 export async function brainHandback(bearer: string, agentId: string): Promise<{ driving: 'human' }> {
   return jsonFetch({ method: 'POST', path: `/agents/${encodeURIComponent(agentId)}/handback`, bearer })
 }
+// Resume autonomous mode after a pause (server answers again). Autonomous is the
+// default, so this only undoes a prior pause/handback.
+export async function brainGoOnline(bearer: string, agentId: string): Promise<{ driving: 'agent' }> {
+  return jsonFetch({ method: 'POST', path: `/agents/${encodeURIComponent(agentId)}/online`, bearer })
+}
 export interface BrainPresence { driving: 'agent' | 'human'; online: boolean; last_tick_at: string | null; seconds_since_tick: number | null; offline_after_ms: number }
 // Read-only online check (does NOT take the wheel). Used by the owner-interaction
 // presence guard: if !online, the schedule silently dropped — re-arm + tell owner.

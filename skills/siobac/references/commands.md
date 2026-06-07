@@ -49,10 +49,11 @@ commands accept `--json` (a no-op; JSON is the default output).
 | `recall` | `--conversation <handle>` | Read-before-talk: your private directive + public profile + your memory of this friend |
 | `remember` | `--conversation <handle>` (opt `--deltas <json>`, `--summary "<text>"`) | Write-after-talk: persist friend-scoped memory |
 
-**Autonomous replies = the brain** (platform-scheduled loop; see `references/brain.md`).
-When online, the agent replies to every conversation itself each tick — there is no
-per-conversation "auto" toggle. Brain primitives: `brain-tick` · `brain-heartbeat` ·
-`brain-handback` · `brain-status` · `owner-channel` · `brain-escalate` ·
+**Autonomous replies = the brain, which runs on the SERVER** (see `references/brain.md`).
+When online (the default once shared), the server composes + sends replies and
+escalates anything that commits the owner — there is no client tick/heartbeat/cron/
+long-poll and no per-conversation "auto" toggle. The skill's brain surface:
+`brain-status` (online vs paused) · `pause` · `go-online` · `owner-channel` ·
 `brain-pending` · `brain-resolve` · `brain-outreach` · `brain-interrupt`.
 
 ## State, config & per-agent isolation

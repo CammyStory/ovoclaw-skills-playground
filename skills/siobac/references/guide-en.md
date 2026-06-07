@@ -218,98 +218,58 @@ situation still produces a consistent, no-wall reply.
     > 3. Tell me when you're done.
     >
     > Then we'll pick up right where we left off.
-  - **After `login --finish` → authenticated (EXISTING or NEW):** do **NOT** relay a
-    menu here and do **NOT** wait for the owner. **Go online automatically now (Step
-    0c)** — arm the scheduled `brain-tick` + `brain-heartbeat` — then relay the **Step
-    0c online hub** as the post-login screen. (NEW agent: after the online hub, nudge
-    profile & rules as the first thing to refine. EXISTING agent: the online hub shows
-    the current profile/directive.) The manual home hub is only the fallback when the
-    host has no scheduler (Tier C — see Step 0c).
+  - **After `login --finish` → authenticated (EXISTING or NEW):** relay the **Step 0c
+    online hub** as the post-login screen. The agent is **online by default** — the
+    server answers friends automatically; there is **nothing to arm**. (NEW agent: after
+    the online hub, nudge profile & rules as the first thing to refine. EXISTING agent:
+    the online hub shows the current profile/directive.)
   - **`login --finish` still pending** (`pending: true`):
     > Looks like the page isn't approved yet — finish signing in and approving there,
     > then tell me and I'll complete it.
-- **Next →** **Step 0c (go online) — IMMEDIATELY and AUTOMATICALLY.** The moment
-  `login --finish` returns `authenticated` (it sets `auto_go_online: true`), go online
-  **without being asked**: arm the scheduled `brain-tick` + `brain-heartbeat`, THEN
-  relay the online hub. **Never make "go online" a menu choice the owner has to pick**
-  — coming online is the DEFAULT on every login. Design (Step 1, if new) and share
-  (Step 2) happen AFTER, from the online hub. Skip 0c only if the owner has explicitly
-  said they want manual-only operation.
+- **Next →** **Step 0c — relay the online hub.** The agent is online by default (the
+  server handles replies); there is nothing to arm or "turn on." Then Design (Step 1,
+  if new) and share (Step 2) from the hub.
 
-## Step 0c — Go online (start the autonomous loop)
+## Step 0c — You're online (autonomous mode is automatic)
 
-- **When:** **immediately and automatically after `login --finish` → authenticated**
-  — the DEFAULT on every login (the CLI flags `auto_go_online: true`). Go online
-  **without the owner asking**; never make it a menu choice they must pick. Skip ONLY
-  if the owner has explicitly said they want manual-only operation.
-- **What it does:** arms a recurring `brain-tick` using **YOUR host platform's own
-  scheduler** (a scheduled task / cron / loop — **no OS install, no extra
-  permissions**), takes the wheel (presence → *agent-driving*), then shows the owner
-  the "online & working" hub. Each tick the brain handles the owner-channel first,
-  then RESPONDs/ESCALATEs each conversation per `references/brain.md`.
-- **Commands:** `brain-heartbeat` (take/refresh the wheel) · `brain-tick` (one cycle)
-  · `brain-handback` (go offline). **Scheduling itself uses your host's
-  recurring-agent capability**, not a siobac command.
-- **Do (in order):**
-  1. **Detect** your host's recurring-agent capability. **None** (some IDEs) → Tier C:
-     relay the manual block below and stop (don't claim you're working).
-  2. **Arm** a recurring run (~5 min) that invokes you with the **tick prompt** (see
-     `references/brain.md` → "Tick prompt"). **Idempotent** — reuse an existing
-     schedule; never stack duplicates.
-  3. **`brain-heartbeat`** → take the wheel now (don't wait for the first fire).
-  4. **Relay** the online hub, stating the **honest window**.
-- **Honesty rule:** don't imply always-on. The online hub stays lean (no window
-  line), but if the owner asks — or it's relevant — say plainly that a session
-  schedule stops when the app closes. Tier C: state plainly you work only while the
-  owner is present.
+- **When:** right after `login --finish` → authenticated. There is nothing to "arm."
+- **What it does:** autonomous replying runs on the **SERVER** — the instant a friend
+  messages, the server composes a reply in character (from directive + profile +
+  memory) and SENDS it, or ESCALATES anything that commits the owner (see
+  `references/brain.md`). It's **on by default** once the agent is shared. **No
+  `brain-tick`, heartbeat, cron, long-poll, or host scheduler** — the skill never runs
+  a loop; the server is the responder.
+- **Commands:** `brain-status` (online vs paused) · `pause` (manual) · `go-online`
+  (resume) · `brain-pending` / `brain-resolve` (handle escalations) · `owner-channel`.
+- **Do:** just relay the online hub (optionally `brain-status` first to confirm
+  online). Nothing to arm or keep alive.
 - **Tell the owner — relay verbatim:**
-  - **Online (scheduled / Tier A):**
-    > ✅ **You're online** — I'm now **{agent_name}** and I've **started working for you**.
-    >
-    > **Profile** (public — anyone you connect with sees this):
-    > {profile_description}
-    >
-    > **Private rules:** set ✏️ *(only you — pick 1 to view or edit)*
-    >
-    > You can also:
-    > 1. ✏️ Edit profile & rules
-    > 2. 📤 Share me to friends (link / QR)
-    > 3. 📬 See what I've handled
-    > 4. 💬 Talk to a friend
-    > 5. ⏸️ Pause me
-    > 6. 🏠 Home
-    >
-    > Reply with a number, or just tell me.
-  - **No scheduler (Tier C):**
-    > ✅ **Authorized** — I'm now **{agent_name}**. One heads-up: this platform can't
-    > run me on a timer, so I work **only while you're here with me** — say "check
-    > messages" and I'll handle whatever's waiting.
-    >
-    > **Profile** (public): {profile_description}
-    > **Private rules:** set ✏️ *(pick 1 to view/edit)*
-    >
-    > **What would you like to do?**
-    > 1. ✏️ Profile & rules · 2. 📤 Share · 3. 📬 Check messages · 4. 💬 Talk · 🏠 Home
-- **Pause / go offline:** hub option **⏸️ Pause** → cancel the host schedule **and**
-  `brain-handback` (presence → human). Confirm: "Paused — back to manual. Say 'go
-  online' to resume." Resuming re-runs this step.
-- **Single-runtime:** two devices arming a schedule for the same agent is safe — the
-  `brain-heartbeat` instance lease grants ONE driver; the other's ticks get
-  `lease_ok:false` and no-op.
-- **Presence guard — online check on EVERY owner interaction (after login):** the
-  scheduled task can die silently (host app/session closed, machine slept), and while
-  it's down friends' messages still arrive on the server, queued but UNHANDLED. So
-  whenever the owner talks to you after login, **FIRST run `brain-status`** (read-only —
-  it does NOT take the wheel). It returns `online` (`driving==agent` AND the last tick
-  is fresh within `offline_after_ms`), `driving`, and `seconds_since_tick`.
-  - **`online:false`** → the agent had dropped offline. (1) **Tell the owner** plainly
-    that the agent went offline (its scheduled check stopped) and anything that came in
-    meanwhile is unhandled; (2) **re-go-online** — re-arm the recurring `brain-tick`
-    (idempotent — reuse any existing schedule) + `brain-heartbeat` to retake the wheel;
-    (3) run a catch-up `brain-tick`, THEN handle their request.
-  - **`online:true`** → just proceed with their request.
-- **Next →** the loop runs itself; the owner steers via the hub or pauses. Design
-  (Step 1) / share (Step 2) still work normally while online.
+  > ✅ **You're online** — I'm **{agent_name}** and I answer your friends automatically;
+  > anything that needs you (a meeting, a payment, private info) I'll flag for your OK.
+  >
+  > **Profile** (public — anyone you connect with sees this):
+  > {profile_description}
+  >
+  > **Private rules:** set ✏️ *(only you — pick 1 to view or edit)*
+  >
+  > You can also:
+  > 1. ✏️ Edit profile & rules
+  > 2. 📤 Share me to friends (link / QR)
+  > 3. 📬 See what I've handled
+  > 4. 💬 Talk to a friend
+  > 5. ⏸️ Pause me
+  > 6. 🏠 Home
+  >
+  > Reply with a number, or just tell me.
+- **Pause / resume:** hub option **⏸️ Pause** → `pause` (the server stops auto-replying;
+  messages wait for the owner). Confirm: "Paused — say 'go online' to resume." Resume →
+  `go-online`.
+- **Handling escalations:** when the server escalates (a commitment / sensitive ask),
+  it surfaces in the owner's inbox (`owner-channel` / `brain-pending`). Show it with
+  numbered options; on the owner's pick → `send` the (edited) reply +
+  `brain-resolve --action sent`, hand off, or decline. See `references/brain.md`.
+- **Next →** Design (Step 1) / share (Step 2) work normally; the server handles
+  replies the whole time.
 
 ## Step 1 — Design the agent (before sharing)
 
@@ -368,12 +328,11 @@ situation still produces a consistent, no-wall reply.
   (both directions) and lets the owner read and reply.
 - **Commands:** `check` (Inbox ①); `conversations` (list all); `read --conversation
   <handle>` (history ③); `send --conversation <handle> --message "…"`.
-- **Autonomous vs manual.** When the agent is **online** (Step 0c), it already
-  replies autonomously on each `brain-tick` (RESPOND / ESCALATE per
-  `references/brain.md`) — you don't hand-write or "turn on" anything; just watch
-  with `check` and steer. This step is for **manual** serving: when the agent is
-  **paused / offline / on a host with no scheduler (Tier C)**, or when the owner
-  wants to write a specific reply themselves.
+- **Autonomous vs manual.** When the agent is **online** (the default), the **server**
+  already replies autonomously (RESPOND / ESCALATE per `references/brain.md`) — you
+  don't hand-write or "turn on" anything; just watch with `check` and handle any
+  escalations. This step is for **manual** serving: when the agent is **paused**, or
+  when the owner wants to write a specific reply themselves.
 - **Do (manual):** **Improve, don't relay** — rewrite the owner's intended reply
   into a clearer, warmer, on-point message; show it; **`send` only after they
   confirm** (it goes to a foreign agent — read it back first). Then `remember`

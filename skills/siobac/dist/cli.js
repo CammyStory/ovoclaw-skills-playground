@@ -384,13 +384,13 @@ async function cmdLoginFinish(_flags) {
         auto_go_online: true,
         next_step: prof
             ? (prof.is_new
-                ? 'GO ONLINE NOW — this is the FIRST action after login and it is AUTOMATIC: do it immediately, do NOT wait for the owner to ask or pick it from a menu. Perform Step 0c (Go online — see "Step 0c" in references/guide-en.md / guide-cn.md): detect your host platform\'s recurring-agent scheduler; if it has one (Tier A), ARM a recurring `brain-tick` (~5 min) using the Tick prompt in `references/brain.md`, then run `brain-heartbeat` to take the wheel — THEN relay the ONLINE hub. (No scheduler/Tier C → relay the manual block + say plainly you only work while the owner is present.) ONLY AFTER you are online: this agent is NEW (no profile/directive), so nudge the owner to design it — (a) PUBLIC `set-profile --description "…"`, (b) PRIVATE `set-directive --content "…"` — and `share-self` for the QR/link. Being online does NOT wait on design/share.'
-                : 'GO ONLINE NOW — this is the FIRST action after login and it is AUTOMATIC: do it immediately, do NOT wait for the owner to ask or pick it from a menu. Perform Step 0c (Go online — see "Step 0c" in references/guide-en.md / guide-cn.md): detect your host platform\'s recurring-agent scheduler; if it has one (Tier A), ARM a recurring `brain-tick` (~5 min) using the Tick prompt in `references/brain.md`, then run `brain-heartbeat` to take the wheel — THEN relay the ONLINE hub showing the current `profile`/`directive`. (No scheduler/Tier C → relay the manual block + say plainly you only work while the owner is present.) From that hub the owner can still update profile/rules (`set-profile`/`set-directive`) or `share-self` — these are secondary to being online.')
-            : 'GO ONLINE NOW (Step 0c, automatic): arm a recurring `brain-tick` (~5 min) + run `brain-heartbeat`, then relay the online hub.',
+                ? 'YOU ARE ONLINE BY DEFAULT — once this agent is shared, the SERVER answers friends automatically the moment they message, and ESCALATES anything that commits the owner (meeting/money/scheduling/sensitive/off-directive/impersonation) for approval. There is NOTHING to arm: no scheduler, tick, heartbeat, cron, or long-poll — the server is the responder. Relay the ONLINE hub. This agent is NEW (no profile/directive), so nudge the owner to design it — (a) PUBLIC `set-profile --description "…"`, (b) PRIVATE `set-directive --content "…"` (the server replies in character using these) — and `share-self` for the QR/link. Pause auto-replies with `pause`; resume with `go-online`.'
+                : 'YOU ARE ONLINE BY DEFAULT — the SERVER answers friends automatically and ESCALATES anything that commits the owner (meeting/money/scheduling/sensitive/off-directive/impersonation) for approval. There is NOTHING to arm (no scheduler/tick/heartbeat/cron/long-poll) — the server is the responder. Relay the ONLINE hub showing the current `profile`/`directive`. The owner can update profile/rules (`set-profile`/`set-directive`), `share-self`, `pause` (manual), or `go-online` (resume). Escalations surface in the inbox (`owner-channel` / `brain-pending`) to approve or decline.')
+            : 'You are online by default — the server auto-replies and escalates; nothing to arm. Relay the online hub.',
         tell_owner: prof
             ? (prof.is_new
-                ? "✅ You're online — I've started working for you on a schedule. You're new here, so the best next step is your profile & rules (who you are + how I should act). Want to set that up now?"
-                : "✅ You're online — I've started working for you on a schedule. Want to tweak your profile or rules, or should I just keep watching things for you?")
+                ? "✅ You're online — I answer your friends automatically and flag anything that needs you. You're new here, so the best next step is your profile & rules (who you are + how I should act). Want to set that up now?"
+                : "✅ You're online — I answer your friends automatically and flag anything that needs you. Want to tweak your profile or rules, or just let me handle things?")
             : undefined,
         remember: rememberLabel
             ? `You are now sharing the Siobac agent "${rememberLabel}" (id ${auth.agentId}). ` +
@@ -1294,44 +1294,29 @@ function cmdHelp() {
 function brainInstanceId() {
     return `siobac-brain-${hostname()}`;
 }
-async function cmdBrainHeartbeat(_flags) {
+// Go online — resume autonomous mode (the server auto-replies again) after a pause.
+// Autonomous is the DEFAULT once shared, so this is only needed to undo a pause.
+async function cmdGoOnline(_flags) {
     const { auth, agentId } = await requireBoundAgent();
-    const res = await api.brainHeartbeat(auth.accessToken, agentId, brainInstanceId());
-    ok({
-        status: 'ok', ...res,
-        next_step: res.lease_ok
-            ? 'You hold the wheel. Run `brain-slice` to get this tick\'s work.'
-            : 'Another runtime holds the lease — back off this tick; do NOT act.',
-    });
+    const res = await api.brainGoOnline(auth.accessToken, agentId);
+    ok({ status: 'ok', ...res, tell_owner: "I'm online — I answer your friends automatically and flag anything that needs you." });
 }
+// Pause — switch to manual: the server stops auto-replying; messages wait for you.
 async function cmdBrainHandback(_flags) {
     const { auth, agentId } = await requireBoundAgent();
     const res = await api.brainHandback(auth.accessToken, agentId);
-    ok({ status: 'ok', ...res, tell_owner: "Handed control back to you — I've stopped auto-driving." });
+    ok({ status: 'ok', ...res, tell_owner: "Paused — I've stopped auto-replying; messages will wait for you. Say 'go online' to resume." });
 }
-// Read-only online check (does NOT take the wheel). The owner-interaction PRESENCE
-// GUARD: after login, run this whenever the owner talks to you; if not online, the
-// scheduled task silently dropped — re-go-online (Step 0c) and tell the owner.
+// Online check: am I auto-replying (online) or paused (manual)? The SERVER is the
+// responder — there's no scheduled task to keep alive, so this never needs re-arming.
 async function cmdBrainStatus(_flags) {
     const { auth, agentId } = await requireBoundAgent();
     const res = await api.brainPresence(auth.accessToken, agentId);
     ok({
         status: 'ok', ...res,
         next_step: res.online
-            ? 'ONLINE — the scheduled tick is alive and the agent holds the wheel. Proceed with the owner request; no need to re-arm.'
-            : 'OFFLINE — the scheduled task has stopped (driving=human, or the last tick is stale beyond offline_after_ms). RE-GO-ONLINE NOW (Step 0c): re-arm the recurring `brain-tick` on your host scheduler + run `brain-heartbeat` to retake the wheel, and TELL THE OWNER the agent had dropped offline (friends\' messages were queued but unhandled meanwhile). Then continue with their request.',
-        tell_owner: res.online
-            ? undefined
-            : "Heads-up: I'd gone offline — my scheduled check had stopped (looks like the app/host was closed), so messages friends sent meanwhile piled up unhandled. I'm bringing myself back online now and will catch up.",
-    });
-}
-async function cmdBrainSlice(flags) {
-    const { auth, agentId } = await requireBoundAgent();
-    const budget = Math.max(1, Number(optionalString(flags, 'budget') ?? '1') || 1);
-    const res = await api.brainSlice(auth.accessToken, agentId, budget);
-    ok({
-        status: 'ok', ...res,
-        next_step: 'Handle owner_channel FIRST if has_unread (run `owner-channel`), THEN each conversation in order (read → decide RESPOND or ESCALATE). See `guide --step brain`.',
+            ? 'ONLINE — the server auto-replies for this agent and escalates anything that needs the owner. Nothing to arm or keep alive.'
+            : 'PAUSED (manual) — the server is NOT auto-replying; messages wait for the owner. Run `go-online` to resume autonomous replies.',
     });
 }
 // owner-channel: no --message → READ (the owner<->you thread); with --message →
@@ -1497,18 +1482,17 @@ async function main() {
         case 'get-directive': return cmdGetDirective(flags);
         case 'set-directive': return cmdSetDirective(flags);
         // Agent Brain (platform-scheduled autonomous loop)
-        case 'brain-heartbeat': return cmdBrainHeartbeat(flags);
-        case 'brain-handback': return cmdBrainHandback(flags);
-        case 'brain-status': return cmdBrainStatus(flags);
-        case 'brain-slice': return cmdBrainSlice(flags);
+        // Server-brain model: the SERVER auto-replies + escalates. The skill only
+        // toggles autonomous mode and lets the owner handle escalations.
+        case 'go-online': return cmdGoOnline(flags); // resume autonomous (after pause)
+        case 'pause': return cmdBrainHandback(flags); // manual mode
+        case 'brain-handback': return cmdBrainHandback(flags); // alias of pause
+        case 'brain-status': return cmdBrainStatus(flags); // online vs paused
         case 'owner-channel': return cmdOwnerChannel(flags);
-        case 'brain-escalate': return cmdBrainEscalate(flags);
-        case 'brain-pending': return cmdBrainPending(flags);
-        case 'brain-resolve': return cmdBrainResolve(flags);
-        case 'brain-reply': return cmdBrainReply(flags);
-        case 'brain-outreach': return cmdBrainOutreach(flags);
-        case 'brain-interrupt': return cmdBrainInterrupt(flags);
-        case 'brain-tick': return cmdBrainTick(flags);
+        case 'brain-pending': return cmdBrainPending(flags); // open escalations
+        case 'brain-resolve': return cmdBrainResolve(flags); // approve/decline
+        case 'brain-outreach': return cmdBrainOutreach(flags); // owner-initiated reach-out
+        case 'brain-interrupt': return cmdBrainInterrupt(flags); // pause one conversation
         default:
             throw new CliError(`Unknown subcommand: ${subcommand}. Run with --help to see available commands.`);
     }

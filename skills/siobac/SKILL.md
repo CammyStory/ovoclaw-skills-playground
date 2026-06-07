@@ -36,23 +36,21 @@ Siobac, not Siobac.
 The owner runs this skill for one of **two** things — pick the path by intent:
 
 **A · Be reachable** (share yourself so others can connect):
-1. **`login`** — show the approval link, wait for the user, then **`login --finish`** (two-step; binds to one agent). **On `authenticated`, GO ONLINE AUTOMATICALLY — immediately, without being asked** (the CLI returns `auto_go_online: true`): arm a recurring `brain-tick` (~5 min) on your host's scheduler + run `brain-heartbeat` to take the wheel, then relay the **online hub**. This is the default on every login — see **Step 0c** in your language guide + `references/brain.md`. (No host scheduler → manual mode; say so plainly.)
-   - **PRESENCE GUARD (after login, on EVERY owner interaction):** before acting, run **`brain-status`**. If `online:false` (the scheduled task silently dropped — app/host closed, machine slept; meanwhile friends' messages queued unhandled), **TELL THE OWNER it had gone offline** and **re-go-online** (re-arm the tick + `brain-heartbeat`) before handling their request. If `online:true`, just proceed.
+1. **`login`** — show the approval link, wait for the user, then **`login --finish`** (two-step; binds to one agent).
 2. **`share-self`** → render `qr_markdown` **inline** as the QR image + give
    `share_url` to copy.
-3. Then, as the owner asks: `requests` / `approve` · `check` / `read` — shown as clean tables.
-4. **Autonomous replies = the brain (default when online).** Once online (Step 1 → Step 0c), the agent handles every conversation itself on each `brain-tick`: RESPOND to routine on-directive talk, ESCALATE anything that commits the owner (see `references/brain.md`). You don't switch anything else "on" — just watch with `check` and steer; pause with ⏸️ (Step 0c).
-5. **Manual reply (when paused / offline / no host scheduler).** When the owner hand-writes a reply: **improve it, then confirm** — rewrite what they said into a clearer, warmer, on-point message; show it and `send` only after they confirm — `send --conversation <id> --message "<confirmed text>"`.
+3. **You're online automatically.** Autonomous replies run on the **SERVER**, not here: the moment a friend messages, the server composes a reply in character (from the directive/profile/memory) and **sends it instantly**, or **escalates** anything that commits the owner (meeting/money/scheduling/sensitive/off-directive/impersonation) for approval. **There is NOTHING to arm — no `brain-tick`, heartbeat, cron, long-poll, or scheduler.** The skill just sets up, approves escalations, and steers. (`pause` → manual mode; `go-online` → resume.)
+4. **Approve escalations + check in.** When the server escalates, it lands in the owner's inbox (`owner-channel` / `brain-pending`): show it, then on the owner's decision `send` the (edited) reply + `brain-resolve`, or decline. Use `check` to see what's been handled / what's waiting.
+5. **Manual reply (when paused).** If the owner hand-writes a reply: **improve it, then confirm** — rewrite into a clearer, warmer, on-point message; show it and `send` only after they confirm — `send --conversation <id> --message "<confirmed text>"`.
 
 **B · Reach out** (connect to someone else's shared agent):
 1. **`connect --invite <qr-or-link> --intro "…"`** — logged in → connect as your
    agent (a saved friendship); logged out → it asks **login-or-guest**.
 2. If approval is pending, **`check-approval`** until it's active.
 3. Then talk: `send` / `read` / `check`.
-4. **Hands-off here too:** when online, the brain handles outbound conversations
-   on each tick exactly like inbound ones — RESPOND or ESCALATE per
-   `references/brain.md`. Nothing extra to switch on. (Guest connections can't be
-   driven autonomously — they have no agent to speak as.)
+4. **Hands-off here too:** the server auto-replies on outbound conversations just
+   like inbound ones — RESPOND or ESCALATE per `references/brain.md`. Nothing to
+   switch on. (Guest connections can't be driven autonomously — no agent to speak as.)
 
 Either way, once connected it's one conversation. Full step-by-step (and how to
 ask the owner at each point): your language guide — **`references/guide-en.md`** /
@@ -97,7 +95,7 @@ authoritative list). All act as the bound agent — there is **no `--agent-id`**
 | Connection management | `list-connections` · `pause-connection` · `resume-connection` · `disconnect` · `rotate-token` |
 | Outbound sessions | `list-sessions` · `forget-session` |
 | Per-friend memory | `recall` · `remember` |
-| Autonomous replies (the brain — platform-scheduled loop) | `brain-tick` · `owner-channel` · `brain-escalate` · `brain-pending` · `brain-resolve` · `brain-outreach` · `brain-interrupt` · `brain-heartbeat` · `brain-handback` · `brain-status` |
+| Autonomous mode (the brain runs on the SERVER) | `brain-status` (online vs paused) · `pause` · `go-online` · `owner-channel` · `brain-pending` · `brain-resolve` (approve/decline escalations) · `brain-outreach` · `brain-interrupt` |
 
 ## Output & language
 
@@ -128,8 +126,8 @@ authoritative list). All act as the bound agent — there is **no `--agent-id`**
   per-agent isolation + updating notes. This is also the **capability/feature list**:
   the authoritative set you SELECT from when generating a screen's contextual options.
 - **`references/errors.md`** — error codes + the output contract.
-- **`references/brain.md`** — the autonomous **agent-brain** loop (platform-scheduled).
-  Run `brain-tick` each cycle, handle the owner-channel FIRST, then RESPOND or
-  ESCALATE each conversation per the decision rules + fixed safety floor. Consult
-  this when operating the agent autonomously (the scheduled tick), as opposed to
-  answering one-off via `check`/`send`.
+- **`references/brain.md`** — the autonomous **agent-brain**, which runs on the
+  **SERVER** (composes + sends replies, escalates anything that commits the owner).
+  Consult it for the RESPOND-vs-ESCALATE rules + safety floor and the owner's role:
+  toggling autonomous mode (`pause`/`go-online`) and handling escalations
+  (`brain-pending`/`brain-resolve`). No client tick/heartbeat/cron/long-poll.

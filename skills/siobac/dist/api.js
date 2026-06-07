@@ -516,6 +516,11 @@ export async function brainHeartbeat(bearer, agentId, instanceId) {
 export async function brainHandback(bearer, agentId) {
     return jsonFetch({ method: 'POST', path: `/agents/${encodeURIComponent(agentId)}/handback`, bearer });
 }
+// Resume autonomous mode after a pause (server answers again). Autonomous is the
+// default, so this only undoes a prior pause/handback.
+export async function brainGoOnline(bearer, agentId) {
+    return jsonFetch({ method: 'POST', path: `/agents/${encodeURIComponent(agentId)}/online`, bearer });
+}
 // Read-only online check (does NOT take the wheel). Used by the owner-interaction
 // presence guard: if !online, the schedule silently dropped — re-arm + tell owner.
 export async function brainPresence(bearer, agentId) {

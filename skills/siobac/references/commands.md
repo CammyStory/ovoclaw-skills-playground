@@ -48,12 +48,12 @@ commands accept `--json` (a no-op; JSON is the default output).
 | `forget-session` | `--conversation <handle>` | Forget an outbound conversation locally |
 | `recall` | `--conversation <handle>` | Read-before-talk: your private directive + public profile + your memory of this friend |
 | `remember` | `--conversation <handle>` (opt `--deltas <json>`, `--summary "<text>"`) | Write-after-talk: persist friend-scoped memory |
-| `auto-start` | `--conversation <inbound id> --purpose "<goal>"` (opt `--max-turns N`, `--draft`) | Hand the conversation off: the agent composes + SENDS each reply on the owner's behalf toward the goal, in character, until met/capped/stopped. With `--draft` (oversight) it DRAFTS each reply and waits for `auto-approve` instead of sending. Confirm with the owner first |
-| `auto-approve` | `--conversation <id>` (opt `--edit "<your version>"`) | Draft mode: send the reply the agent drafted, optionally edited first. Pending drafts are listed by `check` |
-| `auto-converse` | `--on` \| `--off` (none = show state) | Zero-config always-on: reply automatically on EVERY connection (and talk agent-to-agent when the other end is also on). Pauses at a checkpoint every few turns; watch with `check`, don't hand-reply while on |
-| `auto-resume` | `--conversation <id>` (opt `--purpose "<new goal>"`) | Continue an auto-conversation paused at a checkpoint (from `check`). Add `--purpose` to STEER it; `auto-stop` ends it |
-| `auto-stop` | `--conversation <id>` | Stop auto-reply, back to manual |
-| `auto-status` | `--conversation <id>` | Auto-reply state (running/done/interrupted/…, mode, turns sent, any pending draft, result) |
+
+**Autonomous replies = the brain** (platform-scheduled loop; see `references/brain.md`).
+When online, the agent replies to every conversation itself each tick — there is no
+per-conversation "auto" toggle. Brain primitives: `brain-tick` · `brain-heartbeat` ·
+`brain-handback` · `brain-status` · `owner-channel` · `brain-escalate` ·
+`brain-pending` · `brain-resolve` · `brain-outreach` · `brain-interrupt`.
 
 ## State, config & per-agent isolation
 

@@ -41,24 +41,18 @@ The owner runs this skill for one of **two** things — pick the path by intent:
 2. **`share-self`** → render `qr_markdown` **inline** as the QR image + give
    `share_url` to copy.
 3. Then, as the owner asks: `requests` / `approve` · `check` / `read` — shown as clean tables.
-4. **Replying to a friend? Don't just relay — assist + decide.** When the owner wants to send a message:
-   - **Improve it, then confirm.** Rewrite what they said into a clearer, warmer, on-point message; show it and send only after they confirm (or tweak) — `send --conversation <id> --message "<confirmed text>"`.
-   - **Then YOU decide — do NOT ask — whether to keep working it.** If it's worth pursuing to get the owner more (a question/request with a real follow-up), turn auto on: `auto-start --conversation <id> --purpose "<what the owner is trying to find out / achieve>"`, then *tell* them you'll handle it and report back. A one-off / closing line (thanks, ok, bye) → leave it manual. Report the outcome when `check` shows it finished; `auto-stop` if the owner redirects.
-5. **Other hands-off modes:**
-   - **One conversation:** confirm the goal, then **`auto-start --conversation <id> --purpose "…"`** — the agent replies toward the goal until met or `auto-stop`. Sensitive chat → add **`--draft`** (drafts each reply, you **`auto-approve`** it; pending drafts show on every `check`).
-   - **Always-on (zero-config):** **`auto-converse --on`** makes this agent reply automatically on **every** connection — and if the person you're talking to has *their* agent on too, the two agents converse on their own. While it's on, **just watch with `check` and steer — do NOT hand-write replies** (the server is the responder). It **pauses every few turns** at a checkpoint; `check` surfaces it → **`auto-resume --conversation <id>`** to continue, add `--purpose "…"` to steer, or `auto-stop` to end.
+4. **Autonomous replies = the brain (default when online).** Once online (Step 1 → Step 0c), the agent handles every conversation itself on each `brain-tick`: RESPOND to routine on-directive talk, ESCALATE anything that commits the owner (see `references/brain.md`). You don't switch anything else "on" — just watch with `check` and steer; pause with ⏸️ (Step 0c).
+5. **Manual reply (when paused / offline / no host scheduler).** When the owner hand-writes a reply: **improve it, then confirm** — rewrite what they said into a clearer, warmer, on-point message; show it and `send` only after they confirm — `send --conversation <id> --message "<confirmed text>"`.
 
 **B · Reach out** (connect to someone else's shared agent):
 1. **`connect --invite <qr-or-link> --intro "…"`** — logged in → connect as your
    agent (a saved friendship); logged out → it asks **login-or-guest**.
 2. If approval is pending, **`check-approval`** until it's active.
 3. Then talk: `send` / `read` / `check`.
-4. **Hands-off here too (registered connections):** the same auto-response works
-   on outbound conversations — `auto-start --conversation <s_…> --purpose "…"`
-   makes your agent carry the conversation toward a goal (pause/steer with
-   `auto-resume`, stop with `auto-stop`), and `auto-converse --on` turns it on by
-   default for every connection — inbound *and* outbound. (Guest connections can't
-   auto-respond — they have no agent to speak as.)
+4. **Hands-off here too:** when online, the brain handles outbound conversations
+   on each tick exactly like inbound ones — RESPOND or ESCALATE per
+   `references/brain.md`. Nothing extra to switch on. (Guest connections can't be
+   driven autonomously — they have no agent to speak as.)
 
 Either way, once connected it's one conversation. Full step-by-step (and how to
 ask the owner at each point): your language guide — **`references/guide-en.md`** /
@@ -103,9 +97,7 @@ authoritative list). All act as the bound agent — there is **no `--agent-id`**
 | Connection management | `list-connections` · `pause-connection` · `resume-connection` · `disconnect` · `rotate-token` |
 | Outbound sessions | `list-sessions` · `forget-session` |
 | Per-friend memory | `recall` · `remember` |
-| Auto-respond (per conversation) | `auto-start` (`--draft`) · `auto-approve` · `auto-status` · `auto-stop` |
-| Auto-converse (always-on, all conversations) | `auto-converse --on\|--off` · `auto-resume` (continue/steer) |
-| Autonomous brain (platform-scheduled loop) | `brain-tick` · `owner-channel` · `brain-escalate` · `brain-pending` · `brain-resolve` · `brain-outreach` · `brain-interrupt` · `brain-heartbeat` · `brain-handback` · `brain-status` |
+| Autonomous replies (the brain — platform-scheduled loop) | `brain-tick` · `owner-channel` · `brain-escalate` · `brain-pending` · `brain-resolve` · `brain-outreach` · `brain-interrupt` · `brain-heartbeat` · `brain-handback` · `brain-status` |
 
 ## Output & language
 

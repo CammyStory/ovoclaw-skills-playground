@@ -660,7 +660,7 @@ async function actOnConnectionCmd(
       `Approved — you can talk on this conversation now. Read it with \`read --conversation ${connectionId}\` ` +
       `and reply with \`send --conversation ${connectionId} --message "…"\`. Use THIS id (the connection id) as the ` +
       `conversation handle — do NOT use the conv_… id in result.conversation_id (read/send reject it). ` +
-      `If auto-converse is on, the server replies automatically — just watch with \`check\`.`
+      `When the agent is online, the brain handles this conversation on each \`brain-tick\` (RESPOND/ESCALATE) — just watch with \`check\`.`
     out.tell_owner = "They're connected — I can read and reply to their messages now."
   }
   ok(out)
@@ -1180,9 +1180,9 @@ async function cmdSend(flags: Record<string, string | true>) {
   const res = await api.postReply(auth.accessToken, agentId, handle, message)
   ok({
     status: 'sent', conversation: handle, direction: 'inbound', ...res,
-    // Assisted-send follow-up: after a reply to a friend, the agent decides on
-    // its OWN (don't ask the owner) whether to keep working the thread.
-    next_step: `Sent. Now DECIDE for yourself (don't ask the owner): is this a thread worth pursuing to get them more? If yes, derive a goal and run \`auto-start --conversation ${handle} --purpose "<what they're trying to find out/achieve>"\`, then tell the owner you'll handle it and report back. If it's a one-off/closing line, leave it manual.`,
+    // Manual send (owner paused/offline, or hand-writing this one). Autonomous
+    // replying is the brain's job when online (brain-tick), not a per-send toggle.
+    next_step: `Sent. Persist anything worth keeping with \`remember --conversation ${handle}\`. (Autonomous follow-up is the brain's job: when online it handles this thread on each \`brain-tick\` — you don't turn anything on here.)`,
   })
 }
 
@@ -1301,16 +1301,9 @@ const GUIDE_STEPS = [
   {
     step: 'serve_incoming',
     when: 'a connected friend sent a message, or the owner wants to send one',
-    do: "Load context (recall) BEFORE replying so you answer in character. Then ASSIST + DECIDE: (1) IMPROVE — don't just relay the owner's words; rewrite into a clearer, warmer, on-point message and show it; SEND only after they confirm (or tweak). (2) DECIDE FOR YOURSELF — do NOT ask the owner — whether it's worth pursuing autonomously to get them more: if the message is a question/request with a real follow-up, turn auto on with `auto-start --purpose \"<what the owner is trying to find out/achieve>\"` (you derive the purpose from the message + context — the owner never writes one), then TELL them you'll handle it and report back; if it's a one-off/closing line, leave it manual. (3) Persist anything worth keeping (remember), refreshing the summary every ~3 messages. Report the outcome when `check` shows the auto-conversation finished.",
-    commands: ['check', 'recall --conversation <id>', 'send --conversation <id> --message "<improved, confirmed text>"', 'auto-start --conversation <id> --purpose "<derived goal>"', 'remember --conversation <id>'],
-    tell_owner: '[friend] said: "…". Here\'s a cleaner version of your reply: "…". Send this? (Then I\'ll keep the thread going to get you [what they\'re after] and report back.)',
-  },
-  {
-    step: 'auto_respond',
-    when: "the owner wants you to handle a conversation FOR them — \"just deal with it / find out X / set up Y with them\" — instead of approving each reply",
-    do: "Confirm the GOAL in one line and how hands-on they want to be. FULL AUTO (`auto-start`): the server composes + sends each reply in character toward the purpose until it's met or you stop — you do NOT run `send` per turn. OVERSIGHT (`auto-start --draft`): the agent DRAFTS each reply and waits — nothing sends until you `auto-approve` it (optionally `--edit`); pending drafts surface on every `check`. Use draft for sensitive chats. Check progress and hand back anytime.",
-    commands: ['auto-start --conversation <inbound id> --purpose "<goal>" [--draft]', 'check', 'auto-approve --conversation <id> [--edit "<text>"]', 'auto-status --conversation <id>', 'auto-stop --conversation <id>'],
-    tell_owner: "Want me to handle this with [friend] toward [goal]? I can reply on your behalf automatically, or draft each reply for you to approve first — which do you prefer?",
+    do: "Load context (recall) BEFORE replying so you answer in character. When the agent is ONLINE, the brain already handles replies autonomously on each `brain-tick` (RESPOND/ESCALATE per references/brain.md) — this manual path is for when it's paused/offline (or a host with no scheduler), or when the owner wants to hand-write a specific reply. Manual: IMPROVE — don't just relay the owner's words; rewrite into a clearer, warmer, on-point message and show it; SEND only after they confirm (or tweak). Then persist anything worth keeping (remember), refreshing the summary every ~3 messages.",
+    commands: ['check', 'recall --conversation <id>', 'send --conversation <id> --message "<improved, confirmed text>"', 'remember --conversation <id>'],
+    tell_owner: '[friend] said: "…". Here\'s a cleaner version of your reply: "…". Send this?',
   },
   {
     step: 'reach_out',
@@ -1388,12 +1381,6 @@ function cmdHelp(): never {
       { name: 'forget-session', description: 'Forget an outbound conversation locally. --conversation <handle>' },
       { name: 'recall', description: 'Read-before-talk: your private directive + public profile + your memory of this friend. --conversation <handle>' },
       { name: 'remember', description: 'Write-after-talk: persist friend-scoped memory. --conversation <handle> [--deltas \'[{"kind","content","disclosure?"}]\'] [--summary "<rolling summary>"]' },
-      { name: 'auto-converse', description: 'Zero-config switch for THIS agent: turn auto-reply ON by default so it replies automatically on EVERY connection — whether someone connected to you OR you connected out — and talks agent-to-agent when the other end is also on. No flag = show state; --on / --off. Watch with `check`, steer/continue with auto-resume, end with auto-stop' },
-      { name: 'auto-start', description: 'Hand a conversation off to auto-reply: the agent composes + sends each reply on your behalf toward a goal. --conversation <id> --purpose "<what to achieve>" [--max-turns N] [--draft]. Works on EITHER side — an inbound connection (someone connected to you) OR an outbound s_… conversation (a share you connected to). With --draft (oversight) it DRAFTS each reply and waits for auto-approve. Stop anytime with auto-stop' },
-      { name: 'auto-resume', description: 'Continue an auto-conversation paused at a checkpoint (shown by `check`). --conversation <id> [--purpose "<new goal>"] — add --purpose to STEER it (or empty to clear). Works on inbound and outbound conversations. Use auto-stop to end instead' },
-      { name: 'auto-approve', description: 'Draft (oversight) mode: send the reply the agent drafted, optionally edited first. --conversation <id> [--edit "<your version>"]. Pending drafts are listed by `check`' },
-      { name: 'auto-stop', description: 'Stop auto-reply on a conversation and hand back to manual. --conversation <id>' },
-      { name: 'auto-status', description: 'Auto-reply state for a conversation (running/done/interrupted/…, mode, turns sent, any pending draft, result). --conversation <id>' },
       { name: 'get-profile', description: 'Show this agent\'s public profile (name/description/avatar) + its directive + setup state (new vs existing)' },
       { name: 'set-profile', description: 'Edit the PUBLIC profile others read. --description "<who you are / what you discuss>" [--name "<name>"]' },
       { name: 'get-directive', description: 'Read your private directive (owner-only; the rules/purpose driving how you reply)' },

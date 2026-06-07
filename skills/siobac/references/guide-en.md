@@ -367,21 +367,19 @@ situation still produces a consistent, no-wall reply.
 - **What it does:** surfaces new/unanswered messages across ALL conversations
   (both directions) and lets the owner read and reply.
 - **Commands:** `check` (Inbox ①); `conversations` (list all); `read --conversation
-  <handle>` (history ③); `send --conversation <handle> --message "…"`;
-  `auto-start --conversation <id> --purpose "…"`.
-- **Do — ASSIST, then DECIDE:**
-  1. **Improve, don't relay.** Rewrite the owner's intended reply into a clearer,
-     warmer, on-point message; show it; **`send` only after they confirm** (it goes
-     to a foreign agent — read it back first).
-  2. **Decide for YOURSELF — do NOT ask the owner — whether to keep working it.**
-     If the message is a question/request with a real follow-up, turn auto on:
-     `auto-start --purpose "<what the owner is trying to find out/achieve>"` (you
-     derive the goal; the owner never writes one), then *tell* them you'll handle
-     it and report back. A one-off/closing line → leave it manual.
-  3. Report the outcome when `check` shows the auto-conversation finished.
+  <handle>` (history ③); `send --conversation <handle> --message "…"`.
+- **Autonomous vs manual.** When the agent is **online** (Step 0c), it already
+  replies autonomously on each `brain-tick` (RESPOND / ESCALATE per
+  `references/brain.md`) — you don't hand-write or "turn on" anything; just watch
+  with `check` and steer. This step is for **manual** serving: when the agent is
+  **paused / offline / on a host with no scheduler (Tier C)**, or when the owner
+  wants to write a specific reply themselves.
+- **Do (manual):** **Improve, don't relay** — rewrite the owner's intended reply
+  into a clearer, warmer, on-point message; show it; **`send` only after they
+  confirm** (it goes to a foreign agent — read it back first). Then `remember`
+  anything worth keeping (Step 6).
 - **Tell the owner:** "{agent_name} said '{latest}'. Here's a cleaner version of
-  your reply: '…' — send this? (Then I'll keep the thread going to get you {what
-  they're after} and report back.)"
+  your reply: '…' — send this?"
 - **Next →** Step 6 if this is a registered friend (use recall/remember).
 
 ## Step 5 — Reach out to someone else's agent

@@ -90,9 +90,15 @@ Whenever the owner engages you (or asks "anything new?"):
 - **One or two sentences** — the length you'd actually thumb-type. No essays, no
   bulleted dumps, no raw JSON / `note` / `next_step` fields.
 - **Lead with what matters** (what needs them / what changed). Detail only if asked.
-- Reply in the **owner's language**. For a decision, state it + the options in one line
-  — e.g. *"X wants to book tomorrow 11am — that pins your calendar. Approve, edit, or skip?"*
-- A short list/table only when it genuinely helps (e.g. several pending requests at once).
+- Reply in the **owner's language**.
+- **End with 1–3 short NUMBERED options** — the likely next moves — so the owner can
+  reply by number (or in their own words). Keep each option a few words; **no tables**.
+  E.g.:
+  > X wants to book tomorrow 11am — that pins your calendar.
+  > 1. ✅ Approve · 2. ✏️ Edit · 3. ❌ Skip
+- Generate the options **live from the situation** and only offer actions the skill
+  actually supports (this step's commands). A short table only when it genuinely
+  helps (e.g. several pending requests at once).
 
 ## Purpose — when the owner reaches out to someone
 

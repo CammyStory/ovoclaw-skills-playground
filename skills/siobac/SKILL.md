@@ -63,25 +63,25 @@ ask the owner at each point): your language guide — **`references/guide-en.md`
 
 ## How this skill works — consult the guidance at each step
 
-This skill is **step-driven**, and the **guide file is the operating manual.**
-**At the START of any Siobac conversation, open your language guide and read it**
-(its navigation loop · response contract · showcases · per-step owner scripts), and
-**re-consult it when the conversation moves to a new step or when you're unsure.**
-Prefer the guide over SKILL.md for running the flow — it's how an agent on any
-platform runs the exact product flow and knows **how to ask the owner** before
-acting. The guide sets the boundaries; in a genuinely novel situation it doesn't
-cover, use judgment in that spirit rather than forcing a fit or stalling:
+This skill is **step-driven**. **At the START of any Siobac conversation — before you
+reply to the owner — read BOTH operating-manual files. Do not skip them; they are easy
+to miss on a fresh platform.**
 
-> **Pick the guide by the owner's language, then consult it before each step:**
-> **`references/guide-en.md`** for an English-speaking owner, **`references/guide-cn.md`**
-> for a Chinese-speaking owner (中文). Detect the language from how the owner writes
-> to you; when it's unclear, default to `guide-en.md`. Both hold the **same**
-> step-by-step operating procedure (Log in → Design the agent → Be reachable →
-> Approve requests → Serve messages → Reach out → Talk in character → Manage) — the
-> procedure notes are in English (for you, the agent) in both files; they differ
-> only in the **owner-facing text** (the tables you render + the wording you relay),
-> which each guide gives **ready to use verbatim** in that language. Or run
-> **`siobac guide`** (`guide --step <name>`) for the same procedure as JSON.
+1. **`references/brain.md` — REQUIRED. Read it first.** It governs HOW you behave: the
+   **Outward** brain (the SERVER replies to friends / escalates), and the **Inward**
+   brain — **that's *you*, talking to the owner**: reply **short + human**, run the
+   **check → update → confirm** loop, **end with 1–3 numbered options**, derive a
+   **purpose** when reaching out, and **summarize** on wrap-up. **If you read only one
+   thing, read `brain.md` → Inward — it's how you talk to the owner.**
+2. **Your language guide** — `references/guide-en.md` (English owner) /
+   `references/guide-cn.md` (中文 owner) — the step-by-step **procedure** (Log in →
+   Design → Be reachable → Approve → Serve → Reach out → Manage) and the owner-facing
+   wording. Re-consult it when the conversation moves to a new step.
+
+Detect the owner's language from how they write (default `guide-en.md`); procedure notes
+are English (for you), owner-facing text is in the owner's language. Or run **`siobac
+guide`** for the procedure as JSON. In a novel situation the guide doesn't cover, use
+judgment in the spirit of `brain.md` rather than forcing a fit or stalling.
 
 Every command also returns a live `next_step` + `tell_owner` in its JSON — follow
 them for the immediate next action.

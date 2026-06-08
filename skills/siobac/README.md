@@ -78,7 +78,7 @@ the same way on any platform (no platform-specific packaging).
 
 | Env var | Default | Purpose |
 | --- | --- | --- |
-| `SIOBAC_ENV` | `prod` | Selects the environment. Defaults to **production** (`https://api.ovoclaw.com`). Set to `dev` (or `SIOBAC_DEV=1`) to target the **dev tunnel** (`https://ovo.ovoclaw.com/dev`) for testing. |
+| `SIOBAC_ENV` | `dev` | Selects the environment. This playground/test build defaults to **dev** (`https://ovo.ovoclaw.com/dev`) so a fresh install points at the latest server. Set to `prod` for **production** (`https://api.ovoclaw.com`). (The public release flips this default to prod.) |
 | `SIOBAC_API_BASE` | _(unset)_ | A full URL that overrides `SIOBAC_ENV` entirely — point at any self-hosted endpoint (legacy `OVOCLAW_API_BASE` still honored). An invite URL's own host still wins for reach-out. `doctor` reports the resolved env (prod/dev/custom). |
 | `SIOBAC_AGENT_KEY` | _(unset)_ | A stable per-agent identifier that **namespaces the login/session state** to `~/.siobac/agents/<key>/`. **Required when one machine/home runs more than one agent** — otherwise they share `~/.siobac/auth.json` and all act as the same Siobac agent. Unset → the shared default dir (single-agent installs). |
 

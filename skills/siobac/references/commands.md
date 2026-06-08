@@ -60,10 +60,12 @@ per-conversation "auto" toggle. The skill's brain surface:
 
 ## State, config & per-agent isolation
 
-- **API base:** defaults to **production** `https://api.ovoclaw.com`. To target the
-  dev tunnel instead, opt in with `SIOBAC_ENV=dev` (or `SIOBAC_DEV=1`). For any other
-  server, set a full URL in `SIOBAC_API_BASE` (legacy `OVOCLAW_API_BASE` still honored),
-  which overrides both. `doctor` reports the resolved `api_base.env` (prod/dev/custom).
+- **API base (playground/test build):** defaults to the **dev** environment
+  `https://ovo.ovoclaw.com/dev` so a fresh install points at the latest server. To use
+  **production**, opt in with `SIOBAC_ENV=prod`. For any other server, set a full URL in
+  `SIOBAC_API_BASE` (legacy `OVOCLAW_API_BASE` still honored), which overrides both.
+  `doctor` reports the resolved `api_base.env` (dev/prod/custom). (The public release
+  flips this default to prod.)
 - **State directory:** `~/.siobac/` holds `auth.json` (+ `auth.json.bak`),
   `agent.json`, `sessions.json`.
 - **Per-agent isolation via a local binding file.** On first `login`/`connect` in

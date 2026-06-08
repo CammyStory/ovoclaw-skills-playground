@@ -48,36 +48,35 @@ export function makeApiError(
   return err
 }
 
-// PRODUCTION is the default — a fresh install talks to the public server. The
-// dev environment (the /dev tunnel to a local server) is OPT-IN, so testing is a
-// deliberate choice and a release can never accidentally ship pointed at dev.
-// (The Siobac brand keeps the ovoclaw.com backend domain.)
+// PLAYGROUND / TEST build: DEV is the default — a fresh install (e.g. on an outside
+// platform) points at the dev environment, where the latest server changes live, so
+// testing "just works" without setting an env var. Opt into PRODUCTION with
+// SIOBAC_ENV=prod (the public release flips this default). SIOBAC_API_BASE overrides
+// with any full URL. (The Siobac brand keeps the ovoclaw.com backend domain.)
 //
 // Base resolution, in priority order:
 //   1. SIOBAC_API_BASE (or legacy OVOCLAW_API_BASE) — an explicit full URL; wins.
-//   2. SIOBAC_ENV=dev (alias: development/staging, or SIOBAC_DEV=1) — the dev tunnel.
-//   3. default — production.
+//   2. SIOBAC_ENV=prod (alias: production) — the public server.
+//   3. default — the dev environment.
 const PROD_API_BASE = 'https://api.ovoclaw.com'
 const DEV_API_BASE = 'https://ovo.ovoclaw.com/dev'
 
-function devOptIn(): boolean {
+function prodOptIn(): boolean {
   const env = (process.env.SIOBAC_ENV ?? '').trim().toLowerCase()
-  if (env === 'dev' || env === 'development' || env === 'staging') return true
-  const flag = (process.env.SIOBAC_DEV ?? '').trim().toLowerCase()
-  return flag === '1' || flag === 'true' || flag === 'yes'
+  return env === 'prod' || env === 'production'
 }
 
 export function getApiBase(): string {
   const explicit = process.env.SIOBAC_API_BASE ?? process.env.OVOCLAW_API_BASE
   if (explicit) return explicit
-  return devOptIn() ? DEV_API_BASE : PROD_API_BASE
+  return prodOptIn() ? PROD_API_BASE : DEV_API_BASE
 }
 
 // Which environment getApiBase() resolved to — for diagnostics (doctor).
 // 'custom' = an explicit SIOBAC_API_BASE/OVOCLAW_API_BASE URL is set.
 export function getApiEnv(): 'prod' | 'dev' | 'custom' {
   if (process.env.SIOBAC_API_BASE ?? process.env.OVOCLAW_API_BASE) return 'custom'
-  return devOptIn() ? 'dev' : 'prod'
+  return prodOptIn() ? 'prod' : 'dev'
 }
 
 // ── Skill update reminder ─────────────────────────────────────────────

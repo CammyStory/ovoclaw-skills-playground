@@ -99,3 +99,12 @@ dump JSON or tables (a short table only when several items genuinely need it).
 
 **Ambiguous owner request** — ask ONE thing:
 > Did you mean reply to **Jason** or **Alex**? 1. Jason · 2. Alex
+
+**Several things need you (mixed) — one ranked line, not blocks:**
+> 2 need you: **Jason** wants a 15-min intro (your time zone), and **Alex** asked to connect.
+> 1. Handle Jason · 2. Handle Alex · 3. See both
+
+**A held reply — show the GIST, not the paragraph:**
+> **Jason** asked to meet — I'd reply that you'll check your calendar and get back to him.
+> 1. ✅ Send · 2. ✏️ Edit · 3. 📄 See full draft · 4. ❌ Decline
+> *(A held thread is the escalation — don't ALSO say "you have a new message from Jason.")*

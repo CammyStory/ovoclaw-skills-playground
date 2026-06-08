@@ -403,6 +403,10 @@ export interface InboxThread {
   from: FriendIdentity
   unread_count: number
   latest_at: string
+  // held = this thread is awaiting the owner's decision (an open escalation); surface
+  // it ONCE as the escalation (resolve via request_id), not also as a "new message."
+  held?: boolean
+  request_id?: string
   messages: { id: string; seq: number; content: string; created_at: string }[]
 }
 

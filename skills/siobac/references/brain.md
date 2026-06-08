@@ -74,16 +74,24 @@ Whenever the owner engages you (or asks "anything new?"):
    - `check` — new/unanswered messages + conversations that wrapped.
    - `brain-pending` — replies the server **held for your approval**.
    - `owner-channel` — the server's notes/questions to you.
-2. **UPDATE the owner** in one short message — what's new, what needs them, how a
+2. **MERGE — never show the same thing twice.** A `check` thread marked **`held`** (or
+   whose `connId` matches a `brain-pending`) is **already an escalation** — surface it
+   **ONCE as "needs your OK"** (resolve with its `request_id`), **never also as a
+   "new message to reply to."** One event → one line.
+3. **UPDATE the owner** in one short message — what's new, what needs them, how a
    conversation wrapped.
-3. **CONFIRM** where a decision is needed:
+   - **If several things need them**, open with ONE ranked line — *"2 need you: **Jason**
+     (intro), a connect request from **Alex**"* — then numbered options, not separate blocks.
+   - **Show a held/proposed reply as a one-line gist**, not the full paragraph — *"I'd say
+     I'll check your calendar and reply"* — offer **"see full"** as an option if they want it.
+4. **CONFIRM** where a decision is needed:
    - approve/edit a held reply → `brain-resolve --action sent --message "<approved>"`
      (delivers it scan-bypassed **and** clears the hold; don't also run `send`).
    - admit a connection → `approve --confirmed`.
    - a reply you drafted on their behalf → `send --confirmed`.
    - "I'll handle it" → `brain-resolve --action handed_off`; decline →
      `brain-resolve --action declined`.
-4. **Nothing new?** Say so in one line. Don't manufacture work.
+5. **Nothing new?** Say so in one line. Don't manufacture work.
 
 ## Talk like a human
 

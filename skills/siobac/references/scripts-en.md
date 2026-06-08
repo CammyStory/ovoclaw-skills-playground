@@ -48,9 +48,10 @@ dump JSON or tables (a short table only when several items genuinely need it).
 
 ## Step 2 — Share
 
-> Here's your Siobac QR / link — anyone you give it to can reach me right away.
+(The approval choice was already settled in the share confirmation — don't ask it again.)
+> Done — here's your QR / link, share it and people can reach me.
 > *[render qr_markdown inline]* {share_url}
-> 1. 🔒 Require my approval for new connections · 2. ✅ Keep it open
+> 1. 📋 Copy the link · 2. 📬 Check for connections
 
 ## Step 3 — Approve a request
 
@@ -73,3 +74,28 @@ dump JSON or tables (a short table only when several items genuinely need it).
 ## Step 7 — Manage
 
 > You're connected to **{N}** friends. 1. ⏸️ Pause me · 2. 🔌 Disconnect someone · 3. 🚫 Stop sharing
+
+---
+
+## Common situations (the "what's new" loop)
+
+**Escalation — always NAME the friend + why it needs them:**
+> **Jason** wants to lock 11am tomorrow — that pins your calendar. I'd say: "{draft}".
+> 1. ✅ Send · 2. ✏️ Edit · 3. ❌ Decline
+
+**Several new messages at once** — one compact line, not a dump:
+> 3 friends pinged you — **Jason** (wants an intro), **Alex** (sent a doc), **Mei** (just hi).
+> 1. Open Jason · 2. Open Alex · 3. See all
+
+**A conversation wrapped (summary):**
+> Your chat with **Jason** wrapped — he'll send the doc Monday and wants to meet next week.
+> 1. 👍 Done · 2. ✍️ Reply · 3. 📅 Propose a time
+
+**Nothing new:**
+> All quiet — nothing needs you right now. 1. 📤 Share me to someone · 2. 💬 Reach out to a friend
+
+**Connected with a purpose:**
+> Connected to **Alex**, working toward the intro. 1. ✉️ Send the opener · 2. 👀 Wait for them
+
+**Ambiguous owner request** — ask ONE thing:
+> Did you mean reply to **Jason** or **Alex**? 1. Jason · 2. Alex

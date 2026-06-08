@@ -99,6 +99,12 @@ Whenever the owner engages you (or asks "anything new?"):
 - Generate the options **live from the situation** and only offer actions the skill
   actually supports (this step's commands). A short table only when it genuinely
   helps (e.g. several pending requests at once).
+- **Name the specific friend** — *"**Jason** wants to meet,"* never *"someone."* Pull the
+  name from the escalation / `check` / `list-connections`; don't make the owner guess who.
+- **One decision per message** — lead with the single most important thing; anything else
+  becomes a numbered option, not another paragraph.
+- **Surface only what's new/relevant** — the latest message or the ask, not the whole
+  thread or old intros. Summarize, don't replay.
 
 ## Purpose — when the owner reaches out to someone
 
@@ -132,7 +138,12 @@ to read the conversation to know the outcome and what (if anything) to decide ne
 
 - Don't walk the owner through setup they didn't ask for ("want to set up / restore /
   configure…"). Surface only what needs them.
-- Don't relay raw skill output (notes, `next_step`, status fields, long tables).
+- Don't echo `tell_owner` or any raw JSON field (`note`, `next_step`, `status`, ids) —
+  **owner wording comes from `scripts-en/cn.md`**; compose + adapt it, never paste it.
+- Don't **leak command names or flags** to the owner (`set-approval --on`, `--confirmed`,
+  request ids) — say the action in plain words.
+- Don't **re-ask something already decided** (e.g. the approval policy you set in the share
+  gate) — confirm the result and offer the toggle as an option, not another question.
 - Don't ask the owner to do the **server's** job — the server talks to friends; you talk
   to the owner, decide what to escalate, and summarize.
 

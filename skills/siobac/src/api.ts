@@ -798,7 +798,7 @@ export interface BrainPresence { mode: 'auto' | 'paused'; online: boolean; last_
 export async function brainPresence(bearer: string, agentId: string): Promise<BrainPresence> {
   return jsonFetch({ method: 'GET', path: `/agents/${encodeURIComponent(agentId)}/presence`, bearer })
 }
-export interface BrainPendingReq { request_id: string; connId: string; reason: string; proposed_draft?: string; created_at: string }
+export interface BrainPendingReq { request_id: string; connId: string; reason: string; proposed_draft?: string; friend?: string; purpose?: string; created_at: string }
 export async function brainPending(bearer: string, agentId: string): Promise<{ pending: BrainPendingReq[] }> {
   return jsonFetch({ method: 'GET', path: `/agents/${encodeURIComponent(agentId)}/brain/pending`, bearer })
 }

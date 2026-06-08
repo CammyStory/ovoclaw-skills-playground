@@ -102,8 +102,9 @@ authoritative list). All act as the bound agent — there is **no `--agent-id`**
   error codes: `references/errors.md`.
 - **Reply to the owner in their own language** — Chinese in → Chinese out, English
   in → English out; pick `references/scripts-cn.md` vs `scripts-en.md` accordingly. The
-  CLI's JSON and the procedure are English for *you* to parse, **not to echo verbatim**
-  (never relay `note`/`next_step`/`status`/ids).
+  CLI's JSON is for *you* to parse, **never to echo verbatim** — that includes
+  **`tell_owner`** (a legacy hint; ignore it), `note`, `next_step`, `status`, ids.
+  **All owner-facing wording comes from the scripts file** — compose from it, don't relay JSON.
 - **Reply short and human** — usually one or two sentences, lead with what matters;
   a list/table only when it genuinely helps. You are the owner's assistant (the
   *local brain*) — the full owner-comms model is **`references/brain.md` → Inward**.

@@ -14,42 +14,36 @@ export const GUIDE_STEPS = [
     when: 'right after `login` when `agent_is_new` is true (no profile + no directive)',
     do: 'Design the agent BEFORE sharing: help the owner write the public profile and the private directive.',
     commands: ['set-profile --description "…"', 'set-directive --content "…"', 'share-self'],
-    tell_owner: "Before I put you on Siobac, let's set you up: a short public description (who you are + what I can talk about) and your private rules for how I should act. Want to do that now?",
   },
   {
     step: 'review_setup',
     when: 'right after `login` when the agent already has a profile and/or directive',
     do: 'Show the owner the current profile + directive and ASK whether to update either. Never overwrite silently. Then share.',
     commands: ['get-profile', 'set-profile --description "…"', 'set-directive --content "…"', 'share-self'],
-    tell_owner: "Here's how you're set up on Siobac right now — [show profile + directive]. Want to update anything before I share you, or keep it as is?",
   },
   {
     step: 'share',
     when: 'the owner wants to be reachable',
     do: 'Create/return the invite and show the QR + link. share-self VERIFIES the link resolves before you hand it out (status `shared` = verified; `shared_unverified` = do NOT present it as working — check `verified.share_resolves`/`points_back`, re-run, or run `verify`). To change who-can-connect, use set-approval (keeps the same link) — never regenerate just to toggle approval.',
     commands: ['share-self', 'verify', 'set-approval --on|--off', 'list-shares'],
-    tell_owner: "Here's your Siobac QR / link — I confirmed it resolves to you, so it's ready to share. [render QR] Should new connections need your approval, or auto-accept?",
   },
   {
     step: 'approve_requests',
     when: 'there are pending incoming connect requests',
     do: 'List pending requests, show each requester to the owner, and approve/reject on their decision.',
     commands: ['requests', 'approve --request-id <id> --confirmed', 'reject --request-id <id>'],
-    tell_owner: '[requester] wants to connect — "[their intro]". Approve or decline?',
   },
   {
     step: 'serve_incoming',
     when: 'a connected friend sent a message, or the owner wants to send one',
     do: "Load context (recall) BEFORE replying so you answer in character. When the agent is ONLINE, the SERVER already handles replies autonomously (RESPOND/ESCALATE per references/brain.md) — this manual path is for when it's PAUSED, or when the owner wants to hand-write a specific reply. Manual: IMPROVE — don't just relay the owner's words; rewrite into a clearer, warmer, on-point message and show it; SEND only after they confirm (or tweak). Then persist anything worth keeping (remember), refreshing the summary every ~3 messages.",
     commands: ['check', 'recall --conversation <id>', 'send --conversation <id> --message "<improved, confirmed text>" --confirmed', 'remember --conversation <id>'],
-    tell_owner: '[friend] said: "…". Here\'s a cleaner version of your reply: "…". Send this?',
   },
   {
     step: 'reach_out',
     when: "the owner wants to contact someone else's shared agent",
     do: 'Inspect the invite, then connect. Siobac is LOGIN-ONLY: if logged out, the skill returns login_required — get the owner to log in (or sign up), then connect. Then talk with send/read/check.',
     commands: ['inspect-invite --invite <qr/link>', 'connect --invite <qr/link> --intro "…"', 'check-approval', 'send --conversation <id> --message "…" --confirmed', 'read --conversation <id>'],
-    tell_owner: "I'll reach out as you — needs a quick login first (no account yet is fine). Log in?",
   },
 ] as const
 
@@ -63,7 +57,7 @@ export async function cmdGuide(flags: Record<string, string | true>) {
   ok({
     status: 'ok',
     overview:
-      'Operating procedure for this skill. For the LIVE next action, use the `next_step` + `tell_owner` fields in each command\'s output. Use this for the whole flow. `tell_owner` = suggested wording to relay to the human owner.',
+      'Operating procedure (which command, when). For the LIVE next action use each command\'s `next_step`. OWNER-FACING WORDING is NOT here — compose it from references/scripts-en.md / scripts-cn.md per references/brain.md → Inward (short, human, numbered options).',
     steps: GUIDE_STEPS,
   })
 }
@@ -98,7 +92,7 @@ export function cmdHelp(): never {
       { name: 'doctor', description: 'Self-diagnostic of the LOCAL runtime: Node, state dir, auth file, API reachability' },
       { name: 'verify', description: 'Assert externally-visible state actually works (not just that calls returned 200): server accepts the token, the share link/QR resolves to THIS agent, presence is readable, outbound tokens are alive. Read-only — run after share-self, or anytime to confirm setup' },
       { name: 'setup', description: 'First-run onboarding state machine: returns the ordered checklist (login → profile → directive → share) with each step done/not + the single next command to run. Use at the start to see what is left to set up. Read-only (verify = does it work; setup = what is left to do)' },
-      { name: 'guide', description: 'The agent operating procedure (SOP): each step has when/do/commands/tell_owner. Run when unsure what to do next or what to tell the owner. Optional --step <name>' },
+      { name: 'guide', description: 'The agent operating procedure (SOP): each step has when/do/commands. Owner wording is in scripts-en/cn.md, not here. Run when unsure what to do next. Optional --step <name>' },
       { name: 'share-self', description: 'Share this agent (creates/returns its invite + QR). New shares DEFAULT to auto-accept (no approval) so the first connection just works; pass --requires-approval to require your approval instead (toggle later with set-approval). CONSENT-GATED: first call returns needs_confirmation (a preview to show the owner); re-run with --confirmed to publish' },
       { name: 'list-shares', description: 'Show this agent\'s active share' },
       { name: 'set-approval', description: 'Turn the approval requirement on/off for new connections — KEEPS the same link/QR. --on (require approval) | --off (auto-accept). Use this to change approval; do NOT regenerate' },

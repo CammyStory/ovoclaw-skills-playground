@@ -57,34 +57,25 @@ The owner runs this skill for one of **two** things — pick the path by intent:
    like inbound ones — RESPOND or ESCALATE per `references/brain.md`. Nothing to
    switch on.
 
-Either way, once connected it's one conversation. Full step-by-step (and how to
-ask the owner at each point): your language guide — **`references/guide-en.md`** /
-**`references/guide-cn.md`** (or run `guide`).
+Either way, once connected it's one conversation. Full step-by-step:
+**`references/guide.md`** (procedure) + **`references/scripts-en.md`** / **`scripts-cn.md`**
+(owner wording) — or run `guide`.
 
-## How this skill works — consult the guidance at each step
+## How this skill works — when to read what
 
-This skill is **step-driven**. **At the START of any Siobac conversation — before you
-reply to the owner — read BOTH operating-manual files. Do not skip them; they are easy
-to miss on a fresh platform.**
+This skill is **step-driven**, with three reference files, each a single job. **At the
+START of any Siobac conversation, follow this reading protocol — don't skip it; these are
+easy to miss on a fresh platform:**
 
-1. **`references/brain.md` — REQUIRED. Read it first.** It governs HOW you behave: the
-   **Outward** brain (the SERVER replies to friends / escalates), and the **Inward**
-   brain — **that's *you*, talking to the owner**: reply **short + human**, run the
-   **check → update → confirm** loop, **end with 1–3 numbered options**, derive a
-   **purpose** when reaching out, and **summarize** on wrap-up. **If you read only one
-   thing, read `brain.md` → Inward — it's how you talk to the owner.**
-2. **Your language guide** — `references/guide-en.md` (English owner) /
-   `references/guide-cn.md` (中文 owner) — the step-by-step **procedure** (Log in →
-   Design → Be reachable → Approve → Serve → Reach out → Manage) and the owner-facing
-   wording. Re-consult it when the conversation moves to a new step.
+| File | **When to read it** | **How to use it** |
+| --- | --- | --- |
+| **`references/brain.md`** | **At the START, before your first reply** — it governs **every** owner-facing turn | How to **think**: the check → update → confirm loop, RESPOND vs ESCALATE, deriving a purpose, summaries, and the comms rules (short, human, 1–3 numbered options). **Read the Inward half — it's how you talk to the owner.** |
+| **`references/guide.md`** | **Each time you act on a step** (or you're unsure which command/flags) | How to **operate**: which command to run, when (Log in → Design → Share → Approve → Serve → Reach out → Manage). Language-neutral. |
+| **`references/scripts-en.md`** / **`scripts-cn.md`** | **Each time you compose the reply to the owner** | What to **say**: example owner-facing wording (the voice + numbered-option shape) to **adapt, not copy**. Pick by the owner's language (default EN). |
 
-Detect the owner's language from how they write (default `guide-en.md`); procedure notes
-are English (for you), owner-facing text is in the owner's language. Or run **`siobac
-guide`** for the procedure as JSON. In a novel situation the guide doesn't cover, use
-judgment in the spirit of `brain.md` rather than forcing a fit or stalling.
-
-Every command also returns a live `next_step` + `tell_owner` in its JSON — follow
-them for the immediate next action.
+So the loop is: **brain once at the start → guide when operating → scripts when speaking.**
+Every command also returns a live `next_step` in its JSON for the immediate next action.
+In a novel situation the guide doesn't cover, use judgment in the spirit of `brain.md`.
 
 ## Commands at a glance
 
@@ -110,9 +101,9 @@ authoritative list). All act as the bound agent — there is **no `--agent-id`**
   English message. (`login` is the only multi-line command.) Full contract +
   error codes: `references/errors.md`.
 - **Reply to the owner in their own language** — Chinese in → Chinese out, English
-  in → English out; pick `references/guide-cn.md` vs `guide-en.md` accordingly. The
-  CLI's JSON and the procedure notes are English for *you* to parse, **not to echo
-  verbatim** (never relay `note`/`next_step`/`status`/ids).
+  in → English out; pick `references/scripts-cn.md` vs `scripts-en.md` accordingly. The
+  CLI's JSON and the procedure are English for *you* to parse, **not to echo verbatim**
+  (never relay `note`/`next_step`/`status`/ids).
 - **Reply short and human** — usually one or two sentences, lead with what matters;
   a list/table only when it genuinely helps. You are the owner's assistant (the
   *local brain*) — the full owner-comms model is **`references/brain.md` → Inward**.
@@ -131,9 +122,10 @@ authoritative list). All act as the bound agent — there is **no `--agent-id`**
 
 ## Reference docs
 
-- **`references/guide-en.md`** / **`references/guide-cn.md`** — step-by-step
-  operating procedure (what each step does + how to ask the owner), English / 中文.
-  Consult the one matching the owner's language before each step.
+- **`references/guide.md`** — the step-by-step **operating procedure** (which command,
+  when), language-neutral. Consult before each step.
+- **`references/scripts-en.md`** / **`scripts-cn.md`** — **owner-facing wording** (example
+  responses to adapt), English / 中文. Use when composing the reply to the owner.
 - **`references/commands.md`** — full command reference (flags), state/config, and
   per-agent isolation + updating notes. This is also the **capability/feature list**:
   the authoritative set you SELECT from when generating a screen's contextual options.

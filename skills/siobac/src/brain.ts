@@ -69,13 +69,13 @@ export async function cmdBrainResolve(flags: Record<string, string | true>) {
   // do NOT also run a separate `send` for it (that would double-send + re-scan).
   const message = optionalString(flags, 'message')
   const res = await api.brainResolve(auth.accessToken, agentId, requestId, action, action === 'sent' ? message : undefined)
-  ok({
-    status: 'ok', ...res,
-    note: action === 'sent'
-      ? (res.sent ? 'Approved reply delivered to the conversation.' : 'Resolved. (No text to send — nothing was delivered.)')
-      : undefined,
-    tell_owner: action === 'sent' && res.sent ? 'Sent your approved reply.' : undefined,
-  })
+  // Close the loop with ONE clear status for the owner: DONE or UPDATE.
+  const note = res.outcome === 'updated'
+    ? `UPDATE — the friend said something that changed things since the owner approved, so the OLD reply was NOT sent. The hold is refreshed and still open. Tell the owner in ONE line it's an update (what changed: "${res.update?.reason ?? ''}") with the new suggestion ("${res.update?.draft ?? ''}") + numbered options. See scripts → "Escalation resolved".`
+    : action === 'sent'
+      ? (res.sent ? 'DONE — approved reply delivered. Tell the owner in ONE line it is sent + closed (scripts → "Escalation resolved").' : 'Resolved — no text to send.')
+      : `DONE — ${action}. Tell the owner in ONE line it is handled (scripts → "Escalation resolved").`
+  ok({ status: 'ok', ...res, note })
 }
 
 // OWNER-TRIGGERED outreach. The agent NEVER self-initiates: run this ONLY because

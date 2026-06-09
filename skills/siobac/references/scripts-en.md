@@ -124,3 +124,11 @@ dump JSON or tables (a short table only when several items genuinely need it).
 **Something hiccuped / re-auth mid-task:**
 > Quick snag — your session expired, so I paused. One re-login and I'll pick up where we left off.
 > 1. 🔑 Re-login · 2. ❌ Later
+
+**Escalation resolved — close the loop in ONE line (the agent confirms once):**
+- **Done** (sent): *"✅ Done — sent your reply to **jason183**."*
+- **Done** (declined): *"✅ Done — declined, nothing sent."*
+- **Done** (handed off): *"✅ Done — over to you on this one."*
+- **Update** (the conversation moved since you approved — old reply NOT sent, re-decide):
+  > 🔄 Update — since you approved, **jason183** said they'd rather just email. I didn't send the old reply.
+  > New suggestion: "Sure, I'll email the summary over." 1. ✅ Send · 2. ✏️ Edit · 3. ❌ Decline

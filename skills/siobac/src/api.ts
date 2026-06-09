@@ -806,6 +806,6 @@ export interface BrainPendingReq { request_id: string; connId: string; reason: s
 export async function brainPending(bearer: string, agentId: string): Promise<{ pending: BrainPendingReq[] }> {
   return jsonFetch({ method: 'GET', path: `/agents/${encodeURIComponent(agentId)}/brain/pending`, bearer })
 }
-export async function brainResolve(bearer: string, agentId: string, requestId: string, action: 'sent' | 'handed_off' | 'declined', content?: string): Promise<{ ok: boolean; sent?: boolean }> {
+export async function brainResolve(bearer: string, agentId: string, requestId: string, action: 'sent' | 'handed_off' | 'declined', content?: string): Promise<{ ok: boolean; sent?: boolean; outcome?: 'done' | 'updated'; update?: { reason: string; draft: string; friend?: string } }> {
   return jsonFetch({ method: 'POST', path: `/agents/${encodeURIComponent(agentId)}/brain/pending/${encodeURIComponent(requestId)}/resolve`, bearer, body: content !== undefined ? { action, content } : { action } })
 }

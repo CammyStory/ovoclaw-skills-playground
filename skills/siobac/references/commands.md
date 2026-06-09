@@ -21,7 +21,7 @@ commands accept `--json` (a no-op; JSON is the default output).
 | `doctor` | — | Self-diagnostic of the LOCAL runtime; reports `agent_binding`, state dir, auth file, API base, and `skill_freshness` (up-to-date vs a newer version, with how to update) |
 | `verify` | — | Assert externally-visible state ACTUALLY works (not just that calls returned 200): server accepts the token, the share link/QR resolves to THIS agent, profile/directive are set, presence is readable, outbound tokens are alive. Read-only; per-check pass/fail + `ok`. Run after `share-self` or anytime to confirm setup. (`doctor` = local runtime; `verify` = live product state) |
 | `setup` | — | First-run onboarding state machine: ordered checklist (login → profile → directive → share) with each step's done state + the single `next_action` command. Run at the start of onboarding to see what's left. Read-only. (`setup` = what's left to do; `verify` = does it work) |
-| `guide` | — (opt `--step <name>`) | Agent operating procedure (SOP) as JSON: per step → when / do / commands / `tell_owner` |
+| `guide` | — (opt `--step <name>`) | Agent operating procedure (SOP) as JSON: per step → when / do / commands |
 | `get-profile` | — | Show this agent's PUBLIC profile (name/description/avatar) + its directive + setup state (new vs existing) |
 | `set-profile` | `--description "<text>"` (opt `--name`) | Edit the PUBLIC profile others read |
 | `get-directive` | — | Read your PRIVATE directive (owner-only) |

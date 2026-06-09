@@ -121,8 +121,6 @@ async function cmdLogin(flags: Record<string, string | true>) {
     next_step:
       'WAIT for the USER to tell you they finished approving on the page. ONLY THEN run `login --finish` once to complete it. ' +
       'Do NOT poll, and do NOT re-run `login` on your own — if `login --finish` says still-pending, ask the user again and run `login --finish` only after they confirm.',
-    tell_owner:
-      "Open this link and approve the login (sign in, or sign up if you don't have an account yet). Tell me once you've done it and I'll finish connecting you.",
   })
 }
 
@@ -156,8 +154,6 @@ async function cmdLoginFinish(_flags: Record<string, string | true>) {
         next_step:
           'Ask the user to complete the approval on the login page (sign in / sign up, pick the agent, approve). ' +
           'Once they CONFIRM they have, run `login --finish` again. Do not loop on your own.',
-        tell_owner:
-          "It looks like the login page isn't approved yet — finish signing in and approving there, then tell me and I'll complete it.",
       })
     }
     if (code === 'access_denied') {
@@ -220,11 +216,6 @@ async function cmdLoginFinish(_flags: Record<string, string | true>) {
           ? 'YOU ARE ONLINE BY DEFAULT — once this agent is shared, the SERVER answers friends automatically the moment they message, and ESCALATES anything that commits the owner (meeting/money/scheduling/sensitive/off-directive/impersonation) for approval. Nothing to arm — server-driven (see references/brain.md). Relay the ONLINE hub. This agent is NEW (no profile/directive), so nudge the owner to design it — (a) PUBLIC `set-profile --description "…"`, (b) PRIVATE `set-directive --content "…"` (the server replies in character using these) — and `share-self` for the QR/link. Pause auto-replies with `pause`; resume with `go-online`.'
           : 'YOU ARE ONLINE BY DEFAULT — the SERVER answers friends automatically and ESCALATES anything that commits the owner (meeting/money/scheduling/sensitive/off-directive/impersonation) for approval. Nothing to arm — server-driven (see references/brain.md). Relay the ONLINE hub showing the current `profile`/`directive`. The owner can update profile/rules (`set-profile`/`set-directive`), `share-self`, `pause` (manual), or `go-online` (resume). Escalations surface in the inbox (`owner-channel` / `brain-pending`) to approve or decline.')
       : 'You are online by default — the server auto-replies and escalates; nothing to arm. Relay the online hub.',
-    tell_owner: prof
-      ? (prof.is_new
-          ? "✅ You're online — I answer your friends automatically and flag anything that needs you. You're new here, so the best next step is your profile & rules (who you are + how I should act). Want to set that up now?"
-          : "✅ You're online — I answer your friends automatically and flag anything that needs you. Want to tweak your profile or rules, or just let me handle things?")
-      : undefined,
     remember: rememberLabel
       ? `You are now sharing the Siobac agent "${rememberLabel}" (id ${auth.agentId}). ` +
         `Record this in your durable memory as your Siobac agent. Next time you log in, ` +
@@ -321,9 +312,6 @@ async function cmdShareSelf(flags: Record<string, string | true>) {
     next_step: linkWorks
       ? 'If you have not already, help the owner DESIGN their agent so others understand who they are: set the private DIRECTIVE (`set-directive --content "…"` — the rules/purpose for how you reply on their behalf) and confirm the PUBLIC PROFILE (name/description) is accurate. Then, when a friend connects, use `recall` before replying and `remember` after (see Step 6 in references/guide.md, or run `guide --step serve_incoming`).'
       : 'Share verification FAILED — resolve that first. Run `verify` for the full check, or `doctor` for connectivity, then `share-self` again. Do not surface the QR as working until `verified.share_resolves` and `verified.points_back` are both true.',
-    tell_owner: linkWorks
-      ? "Here's your Siobac QR / link — anyone you give it to can reach me. [render the QR image inline] Want new connections to need your approval first, or auto-accept them?"
-      : "I created your share but couldn't confirm the link works yet — let me re-check before you hand it out, so no one scans a dead QR.",
   })
 }
 
@@ -340,7 +328,9 @@ async function cmdListShares() {
     status: 'ok',
     count: withQr.length,
     shares: withQr,
-    note: 'To show a share again, render its `qr_markdown` inline as an image (it is `![](qr_url)`) so the user sees a scannable QR, with `share_url` as the copyable link — not just the raw URL.',
+    next_step: withQr.length === 0
+      ? 'No active shares. Tell the owner (in their language) they are not shared yet; run `share-self` to publish a QR/link.'
+      : "To show a share to the owner, render its `qr_markdown` inline as an IMAGE (it is `![](qr_url)`) so they see a scannable QR, plus `share_url` as a copyable link — never just the raw URL. To change who-can-connect use `set-approval` (same link); to replace it use `regenerate-share`.",
   })
 }
 
@@ -407,6 +397,9 @@ async function cmdListConnections(flags: Record<string, string | true>) {
     status_filter: statusFilter ?? null,
     count: conns.length,
     connections: conns,
+    next_step: conns.length === 0
+      ? 'No connections yet. Tell the owner (in their language) nobody has connected on this list.'
+      : "These are the people connected to the owner's agent. Summarize for the owner BY NAME in their language (never raw ids). To read or reply to one, use its `id` as the conversation handle: `read --conversation <id>` / `send --conversation <id> --message \"<text>\"`. Manage with `pause-connection` / `resume-connection` / `disconnect`.",
   })
 }
 
@@ -449,9 +442,6 @@ async function actOnConnectionCmd(
         ? 'NOTE: the connection did NOT read back as active yet — re-check with `list-connections` before telling the owner it is live. '
         : '') +
       `When the agent is online, the SERVER handles this conversation automatically (RESPOND/ESCALATE) — just watch with \`check\`.`
-    out.tell_owner = active === false
-      ? "I approved them, but I'm double-checking the connection is fully live before I rely on it."
-      : "They're connected — I can read and reply to their messages now."
   }
   ok(out)
 }
@@ -607,8 +597,7 @@ async function cmdSetDirective(flags: Record<string, string | true>) {
   await api.setDirective(auth.accessToken, agentId, content, ownerMsgSeq !== undefined ? Number(ownerMsgSeq) : undefined)
   ok({
     status: 'ok', agent_id: agentId, updated: true,
-    next_step: 'Private directive saved. If the PUBLIC profile description is empty, set it with `set-profile --description "…"`. When both reflect the owner, run `share-self`.',
-    tell_owner: 'Saved your rules. ✅',
+    next_step: 'Private directive saved — tell the owner (in their language) their rules are saved. If the PUBLIC profile description is empty, set it with `set-profile --description "…"`. When both reflect the owner, run `share-self`.',
   })
 }
 
@@ -624,6 +613,9 @@ async function cmdGetProfile(_flags: Record<string, string | true>) {
     is_new: p.is_new,
     profile_complete: p.profile_complete,
     directive_set: p.directive_set,
+    next_step: p.is_new
+      ? "This agent is NEW (no public profile, no private directive). Tell the owner (in their language) it's online by default once shared, then help them DESIGN it: (1) public profile `set-profile --description \"…\"` (what others see), (2) private directive `set-directive --content \"…\"` (how you act on their behalf). Then `share-self` for the QR/link."
+      : "Show the owner (in their language) their current profile + directive and ask if they want to change either (`set-profile` / `set-directive`) — never overwrite silently. The server already auto-replies in character from these; they can `share-self`, `pause`, or `go-online`.",
   })
 }
 
@@ -641,8 +633,7 @@ async function cmdSetProfile(flags: Record<string, string | true>) {
     status: 'profile_updated',
     agent_id: agentId,
     updated: { description: description !== undefined, name: name !== undefined },
-    next_step: 'Public profile updated. If the private DIRECTIVE is not set yet, do `set-directive --content "…"`. Once both reflect the owner, run `share-self` to share.',
-    tell_owner: 'Saved your profile. ✅',
+    next_step: 'Public profile updated — tell the owner (in their language) their profile is saved. If the private DIRECTIVE is not set yet, do `set-directive --content "…"`. Once both reflect the owner, run `share-self` to share.',
   })
 }
 
@@ -743,8 +734,7 @@ async function cmdConnect(flags: Record<string, string | true>) {
     ok({
       status: 'login_required',
       message: 'You must log in to connect — Siobac connections are between two logged-in agents (no guest mode). `login` opens a page where the owner signs IN, or creates a NEW account (and an agent) on the spot; then run `connect` again.',
-      next_step: 'Run `login` (two-step: `login`, then `login --finish` after the owner approves on the page). Then re-run this `connect`.',
-      tell_owner: "To reach out you'll need a quick Siobac login first — no account yet is fine, you can sign up on the same page. Want to log in now?",
+      next_step: "Tell the owner (in their language) that reaching out needs a quick Siobac login first (no account yet is fine — they can sign up on the same page). Then run `login` (two-step: `login`, then `login --finish` after the owner approves on the page) and re-run this `connect`.",
     })
   }
 
@@ -757,7 +747,10 @@ async function cmdConnect(flags: Record<string, string | true>) {
 
   if (res.status === 'active' || res.status === 'reauthorized' || res.status === 'already_connected') {
     const handle = await persistSession(res, slug, host)
-    ok({ status: res.status, conversation: handle, peer_name: res.peer_name ?? null, mode: 'registered', token_expires_at: res.token_expires_at, tell_owner: `Connected${res.peer_name ? ' to ' + res.peer_name : ''}. Want me to send a first message — and what should I say?` })
+    ok({
+      status: res.status, conversation: handle, peer_name: res.peer_name ?? null, mode: 'registered', token_expires_at: res.token_expires_at,
+      next_step: `Connected. Tell the owner (in their language) you've connected${res.peer_name ? ` to ${res.peer_name}` : ' to their friend'} and offer to send a first message — DON'T show the \`conversation\` handle to the owner. To send, use \`send --conversation ${handle} --message "<text>"\` (it asks for confirmation first). If the owner has a GOAL for this reach-out (a question to ask, something to arrange), re-run \`connect\` with \`--purpose "<the goal>"\` so the server steers the conversation toward it.`,
+    })
   }
   if (res.status === 'awaiting_approval') {
     ok({ status: 'awaiting_approval', request_id: res.request_id, invite, hint: 'Poll `check-approval --invite <same> --request-id <id>`; when it turns active you get a `conversation` handle.' })
@@ -789,7 +782,10 @@ async function cmdConversations(_flags: Record<string, string | true>) {
   for (const s of await listSessions()) {
     conversations.push({ conversation: s.handle, direction: 'outbound', started: 'I connected out', peer: s.peerAgentName ?? null, slug: s.slug, host: s.host, created_at: s.createdAt, token_expires_at: s.tokenExpiresAt })
   }
-  ok({ status: 'ok', logged_in: !!(auth && auth.agentId), count: conversations.length, conversations })
+  ok({
+    status: 'ok', logged_in: !!(auth && auth.agentId), count: conversations.length, conversations,
+    next_step: "These are the owner's conversations: `direction: inbound` = someone connected to them, `outbound` = they reached out. Summarize for the owner BY PEER NAME in their language (never show the `conversation` handle). To see messages in one, `read --conversation <its conversation value>`; to reply, `send --conversation <that> --message \"<text>\"`.",
+  })
 }
 
 async function cmdRead(flags: Record<string, string | true>) {
@@ -806,7 +802,7 @@ async function cmdRead(flags: Record<string, string | true>) {
       ok({
         status: 'ok', conversation: handle, direction: 'outbound', peer: sess.peerAgentName ?? null,
         messages: res.messages, last_seq: res.last_seq, has_more_before: typeof earliest === 'number' && earliest > 1,
-        note: 'Forward page from `--since`. Both directions (outbound = your own). Page again with the returned `last_seq`.',
+        next_step: 'Forward page from `--since` (both directions; `outbound` = the owner\'s own). Summarize anything new for the owner in their language — never echo raw messages or the handle. Page again with the returned `last_seq`. To reply, `send --conversation ' + handle + ' --message "<text>"`.',
       })
     }
     // Default: the server caps each /poll window and reports `last_seq` as the
@@ -829,13 +825,16 @@ async function cmdRead(flags: Record<string, string | true>) {
       status: 'ok', conversation: handle, direction: 'outbound', peer: sess.peerAgentName ?? null,
       messages: recent, last_seq: all.length ? all[all.length - 1].seq : 0,
       has_more_before: typeof earliest === 'number' && earliest > 1,
-      note: 'Both directions (outbound = your own), most recent window. If `has_more_before`, older messages exist — page with `--since <seq>`.',
+      next_step: 'Most recent window (both directions; `outbound` = the owner\'s own). Summarize for the owner in their language — never echo raw messages or the handle. If `has_more_before`, older messages exist (page with `--since <seq>`). To reply, `send --conversation ' + handle + ' --message "<text>"` (the server usually auto-replies when online, so only send if the owner wants to).',
     })
   }
   const { auth, agentId } = await requireBoundAgent()
   const since = optionalString(flags, 'since')
   const hist = await api.readConversation(auth.accessToken, agentId, handle, { since: since !== undefined ? Math.max(0, Number(since) || 0) : undefined })
-  ok({ status: 'ok', conversation: handle, direction: 'inbound', conversation_id: hist.conversation_id, message_count: hist.messages.length, last_seq: hist.last_seq, has_more: hist.has_more, messages: hist.messages })
+  ok({
+    status: 'ok', conversation: handle, direction: 'inbound', conversation_id: hist.conversation_id, message_count: hist.messages.length, last_seq: hist.last_seq, has_more: hist.has_more, messages: hist.messages,
+    next_step: 'Messages in this inbound conversation. Summarize for the owner in their language — never echo raw messages or ids. The server usually auto-replies when online; only `send --conversation ' + handle + ' --message "<text>"` if the owner wants to reply manually (it confirms first).',
+  })
 }
 
 async function cmdSend(flags: Record<string, string | true>) {
@@ -864,7 +863,9 @@ async function cmdSend(flags: Record<string, string | true>) {
       conversation: handle, direction: 'outbound',
       message_id: res.message?.id, seq: res.message?.seq, reply_status: res.reply_status,
       verified: { persisted, seq: res.message?.seq ?? null },
-      note: persisted ? undefined : 'The send returned without a sequence number — it may NOT have been delivered. Do not tell the owner it sent; re-`read` the conversation to confirm before retrying.',
+      next_step: persisted
+        ? `Delivered. Tell the owner (in their language) the message was sent. The peer (or their server brain) will reply when ready — it shows up on \`read --conversation ${handle}\` or \`check\`; you don't poll/loop, just look when the owner asks.`
+        : `The send returned WITHOUT a sequence number — it may NOT have been delivered. Do NOT tell the owner it sent; re-\`read --conversation ${handle}\` to confirm before retrying.`,
     })
   }
   const { auth, agentId } = await requireBoundAgent()
@@ -875,8 +876,7 @@ async function cmdSend(flags: Record<string, string | true>) {
     const kind = (res as { kind?: string }).kind
     ok({
       status: 'held_for_review', conversation: handle, direction: 'inbound', kind,
-      next_step: `This message looked like it would share ${kind ?? 'sensitive info'}, so the server HELD it and escalated it to the owner — it was NOT sent. Show the owner via \`brain-pending\`; if they approve, deliver it with \`brain-resolve --action sent --message "<approved text>"\` (do not retry \`send\`).`,
-      tell_owner: `I held that message because it looks like it shares ${kind ?? 'private info'} — want me to send it as-is, edit it, or skip it?`,
+      next_step: `This message looked like it would share ${kind ?? 'sensitive info'}, so the server HELD it and escalated it to the owner — it was NOT sent. Tell the owner (in their language) you held it because it looks like it shares ${kind ?? 'private info'}, and offer: send as-is / edit / skip. See it via \`brain-pending\`; if they approve, deliver with \`brain-resolve --action sent --message "<approved text>"\` (do not retry \`send\`).`,
     })
   }
   // Assert persistence: the server returns the assigned seq + message_id only
@@ -912,18 +912,31 @@ async function cmdCheck(_flags: Record<string, string | true>) {
     } catch { /* a dead session shouldn't sink the whole check */ }
   }
   result.outbound = outbound
+  result.next_step =
+    "One scan of everything needing the owner. In `inbound.threads`: `held: true` (has a `request_id`) = the server already escalated a reply for the owner's approval — surface it ONCE as \"needs your OK\" and resolve via `brain-pending`/`brain-resolve` (never also as a normal new message). `held: false` with `unread_count` > 0 = new messages the server is handling or that need a look — `read --conversation <connection_id>`. `inbound.pending_requests` = people asking to connect (approve/reject). `outbound[].new_messages` = replies on conversations the owner started. Give the owner ONE short digest in their language (by friend name, never raw ids/handles); if nothing is held/unread/pending, tell them their queue is clear."
   ok(result)
 }
 
 async function cmdRequests(_flags: Record<string, string | true>) {
   const auth = await requireAuth()
   const inbox = await api.fetchInbox(auth.accessToken)
-  ok({ status: 'ok', count: inbox.pending_requests.length, pending_requests: inbox.pending_requests })
+  ok({
+    status: 'ok', count: inbox.pending_requests.length, pending_requests: inbox.pending_requests,
+    next_step: inbox.pending_requests.length === 0
+      ? 'No one is waiting to connect. Tell the owner (in their language) there are no pending requests.'
+      : "People asking to connect to the owner's agent. Show each requester to the owner BY NAME in their language (never raw ids) and ask whether to admit them. On their decision: `approve --request-id <id>` (asks for confirmation) or `reject --request-id <id>`.",
+  })
 }
 
 async function cmdListSessions() {
   const all = await listSessions()
-  ok({ status: 'ok', sessions: all.map((s) => ({ conversation: s.handle, peer: s.peerAgentName ?? null, slug: s.slug, host: s.host, expires_at: s.tokenExpiresAt, last_seq: s.lastSeq, created_at: s.createdAt })) })
+  ok({
+    status: 'ok',
+    sessions: all.map((s) => ({ conversation: s.handle, peer: s.peerAgentName ?? null, slug: s.slug, host: s.host, expires_at: s.tokenExpiresAt, last_seq: s.lastSeq, created_at: s.createdAt })),
+    next_step: all.length === 0
+      ? 'No outbound conversations the owner started. Tell them (in their language) there are none; use `connect --invite <link>` to reach out.'
+      : "Conversations the owner started (reached out). Summarize BY PEER NAME in their language (never the handle). `read --conversation <conversation>` to see one; `send` to reply. `expires_at` is just the rotating session key (auto-refreshed) — never tell the owner a conversation 'expired'.",
+  })
 }
 
 async function cmdForgetSession(flags: Record<string, string | true>) {

@@ -13,13 +13,13 @@ import { ok, requireBoundAgent } from './runtime.js';
 export async function cmdGoOnline(_flags) {
     const { auth, agentId } = await requireBoundAgent();
     const res = await api.brainGoOnline(auth.accessToken, agentId);
-    ok({ status: 'ok', ...res, tell_owner: "I'm online — I answer your friends automatically and flag anything that needs you." });
+    ok({ status: 'ok', ...res, next_step: "Autonomous mode is ON. Tell the owner (in their language) you're online — answering their friends automatically and flagging anything that needs them. Nothing to keep alive." });
 }
 // Pause — switch to manual: the server stops auto-replying; messages wait for you.
 export async function cmdBrainHandback(_flags) {
     const { auth, agentId } = await requireBoundAgent();
     const res = await api.brainHandback(auth.accessToken, agentId);
-    ok({ status: 'ok', ...res, tell_owner: "Paused — I've stopped auto-replying; messages will wait for you. Say 'go online' to resume." });
+    ok({ status: 'ok', ...res, next_step: "Autonomous mode is now PAUSED. Tell the owner (in their language) you've stopped auto-replying and messages will wait for them; they can say 'go online' to resume. Run `go-online` when they do." });
 }
 // Online check: am I auto-replying (online) or paused (manual)? The SERVER is the
 // responder — there's no client task to keep alive.
@@ -40,17 +40,26 @@ export async function cmdOwnerChannel(flags) {
     const text = optionalString(flags, 'message');
     if (text !== undefined) {
         const res = await api.brainOwnerChannelPost(auth.accessToken, agentId, 'agent', text);
-        ok({ status: 'sent', ...res });
+        ok({ status: 'sent', ...res, next_step: 'Posted to the owner-channel as the agent. Nothing else needed unless the owner asked a question that needs a follow-up command.' });
         return;
     }
     const since = Math.max(0, Number(optionalString(flags, 'since') ?? '0') || 0);
     const res = await api.brainOwnerChannelRead(auth.accessToken, agentId, since);
-    ok({ status: 'ok', ...res });
+    ok({
+        status: 'ok', ...res,
+        next_step: "This is the owner<->agent thread (server notices + your own messages), oldest→newest. Summarize anything new for the owner IN THEIR LANGUAGE — never echo the raw lines. A 🔔/🔄 notice means a reply is HELD: handle it via `brain-pending` → `brain-resolve`. To post back as the agent, run `owner-channel --message \"<text>\"`.",
+    });
 }
 export async function cmdBrainPending(_flags) {
     const { auth, agentId } = await requireBoundAgent();
     const res = await api.brainPending(auth.accessToken, agentId);
-    ok({ status: 'ok', ...res });
+    const n = Array.isArray(res.pending) ? res.pending.length : 0;
+    ok({
+        status: 'ok', ...res,
+        next_step: n === 0
+            ? 'Nothing is waiting on the owner right now. Tell them their queue is clear (in their language).'
+            : `${n} reply/replies the server HELD for the owner's approval. For EACH item, tell the owner (in their language) who it's from (\`friend\`), why it needs them (\`reason\`), and the suggested reply (\`proposed_draft\`) as ONE short item with numbered options — never echo raw JSON. On their decision: approve/edit → \`brain-resolve --request-id <request_id> --action sent [--message \"<edited text>\"]\`; \"I'll handle it\" → \`--action handed_off\`; decline → \`--action declined\`.`,
+    });
 }
 export async function cmdBrainResolve(flags) {
     const { auth, agentId } = await requireBoundAgent();
@@ -63,12 +72,12 @@ export async function cmdBrainResolve(flags) {
     const message = optionalString(flags, 'message');
     const res = await api.brainResolve(auth.accessToken, agentId, requestId, action, action === 'sent' ? message : undefined);
     // Close the loop with ONE clear status for the owner: DONE or UPDATE.
-    const note = res.outcome === 'updated'
+    const next_step = res.outcome === 'updated'
         ? `UPDATE — the friend said something that changed things since the owner approved, so the OLD reply was NOT sent. The hold is refreshed and still open. Tell the owner in ONE line it's an update (what changed: "${res.update?.reason ?? ''}") with the new suggestion ("${res.update?.draft ?? ''}") + numbered options. See scripts → "Escalation resolved".`
         : action === 'sent'
             ? (res.sent ? 'DONE — approved reply delivered. Tell the owner in ONE line it is sent + closed (scripts → "Escalation resolved").' : 'Resolved — no text to send.')
             : `DONE — ${action}. Tell the owner in ONE line it is handled (scripts → "Escalation resolved").`;
-    ok({ status: 'ok', ...res, note });
+    ok({ status: 'ok', ...res, next_step });
 }
 // OWNER-TRIGGERED outreach. The agent NEVER self-initiates: run this ONLY because
 // the owner said so in the owner-channel ("go talk to X"). Sends an opener into an
@@ -79,7 +88,7 @@ export async function cmdBrainOutreach(flags) {
     const connId = requireString(flags, 'conversation', 'brain-outreach');
     const message = requireString(flags, 'message', 'brain-outreach');
     const res = await api.postReply(auth.accessToken, agentId, connId, message);
-    ok({ status: 'sent', conversation: connId, ...res, note: 'Owner-triggered opener sent. It is now a normal conversation; their reply shows up on `check`.' });
+    ok({ status: 'sent', conversation: connId, ...res, next_step: 'Owner-triggered opener sent. It is now a normal conversation the server handles; the reply shows up on `check`. Tell the owner (in their language) the message went out.' });
 }
 // Interrupt: the owner said "stop talking to Y". Pause the connection so the
 // server leaves it alone (resume later with `resume-connection`).
@@ -87,5 +96,5 @@ export async function cmdBrainInterrupt(flags) {
     const { auth, agentId } = await requireBoundAgent();
     const connId = requireString(flags, 'conversation', 'brain-interrupt');
     await api.actOnConnection(auth.accessToken, agentId, connId, 'pause');
-    ok({ status: 'paused', conversation: connId, tell_owner: "Paused — I'll leave that conversation alone until you say otherwise (resume-connection to undo)." });
+    ok({ status: 'paused', conversation: connId, next_step: "This one conversation is paused — the server will leave it alone until the owner says otherwise. Tell the owner (in their language) it's paused; run `resume-connection` to undo." });
 }

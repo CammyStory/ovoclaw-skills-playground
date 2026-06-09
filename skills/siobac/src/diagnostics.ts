@@ -142,6 +142,9 @@ export async function cmdDoctor() {
     skill_freshness,
     runtime: { node: process.versions.node, platform: platform(), arch: arch() },
     checks,
+    next_step: allOk
+      ? 'Local runtime + connectivity look fine. Tell the owner (in their language) the basics check out. (Run `verify` for the full live product check.)'
+      : 'A local check FAILED — see each `checks` entry\'s `reason`/`value`. Tell the owner (in their language) what is wrong in plain words and fix it before relying on the agent.',
   }
 
   if (allOk) ok(report)
@@ -264,9 +267,9 @@ export async function cmdVerify(_flags: Record<string, string | true>) {
       ? (warnings.length ? `All critical checks passed; ${warnings.length} warning(s) to mention to the owner.` : 'All checks passed — the agent is set up and reachable.')
       : 'One or more critical checks FAILED — fix these before relying on the agent (see each check\'s reason).',
     warnings: warnings.length ? warnings : undefined,
-    tell_owner: allOk
-      ? 'I checked your Siobac setup end-to-end — login, profile, and your share link are all working.'
-      : "I ran a health check and something isn't working yet — let me fix it before we rely on it.",
+    next_step: allOk
+      ? 'All good — tell the owner (in their language) their Siobac setup checks out end-to-end (login, profile, share link). Mention any `warnings` if present.'
+      : "A check FAILED — tell the owner (in their language) something isn't working yet and you'll fix it. See each failed check's `reason`; fix before relying on the agent.",
   }
   if (allOk) ok(report)
   process.stderr.write(JSON.stringify(withUpdateNotice(report), null, 2) + '\n')
@@ -293,8 +296,7 @@ export async function cmdSetup(_flags: Record<string, string | true>) {
         { step: 'share', done: false, label: 'Share (become reachable via QR/link)', command: 'share-self --confirmed' },
       ],
       next_action: 'login',
-      next_step: 'Start with `login` (two-step: `login`, then `login --finish` after the owner approves). Then profile + directive, then `share-self`.',
-      tell_owner: "Let's get you set up on Siobac — it starts with a quick login. Want to begin?",
+      next_step: 'Tell the owner (in their language) you\'ll get them set up on Siobac, starting with a quick login. Then run `login` (two-step: `login`, then `login --finish` after the owner approves), then profile + directive, then `share-self`.',
     })
     return
   }
@@ -311,8 +313,7 @@ export async function cmdSetup(_flags: Record<string, string | true>) {
     ok({
       status: 'setup_unknown', logged_in: true, agent_id: agentId,
       reason: `logged in, but could not refresh the session to read setup state (${(e as api.ApiError).code ?? (e as Error).message})`,
-      next_step: 'Run `doctor` to check connectivity, or `login` again if the session expired, then `setup`.',
-      tell_owner: "You're logged in, but I couldn't refresh your session to check setup — let me retry, or you may need a quick re-login.",
+      next_step: "Logged in, but the session couldn't be refreshed to read setup state. Tell the owner (in their language) you'll retry, or they may need a quick re-login. Run `doctor` to check connectivity, or `login` again if the session expired, then `setup`.",
     })
     return
   }
@@ -331,8 +332,7 @@ export async function cmdSetup(_flags: Record<string, string | true>) {
     ok({
       status: 'setup_unknown', logged_in: true, agent_id: agentId,
       reason: `logged in, but could not reach the server to read setup state (${reachErr})`,
-      next_step: 'Run `doctor` to check connectivity, then `setup` again.',
-      tell_owner: "You're logged in, but I can't reach Siobac right now to check your setup — let me retry shortly.",
+      next_step: "Logged in, but Siobac is unreachable right now to read setup state. Tell the owner (in their language) you'll retry shortly. Run `doctor` to check connectivity, then `setup` again.",
     })
     return
   }
@@ -343,11 +343,6 @@ export async function cmdSetup(_flags: Record<string, string | true>) {
     { step: 'share', done: shared, label: 'Shared (reachable via QR/link)', command: 'share-self --confirmed' },
   ]
   const next = steps.find((s) => !s.done)
-  const ownerLine: Record<string, string> = {
-    profile: "Next let's write your public profile — a short line on who you are and what I can talk about. Want to set it now?",
-    directive: "Next let's set your private directive — your rules for how I act on your behalf. Want to set it now?",
-    share: "You're designed and ready — shall I publish your QR/link so people can reach you?",
-  }
   ok({
     status: next ? 'setup_incomplete' : 'setup_complete',
     logged_in: true, agent_id: agentId, complete: !next,
@@ -355,8 +350,7 @@ export async function cmdSetup(_flags: Record<string, string | true>) {
     next_action: next?.command ?? null,
     next_step: next
       ? `Next step — ${next.label}. Ask the owner for the content (AskUserQuestion is good for structured choices), then run \`${next.command}\`. Remaining steps follow in order; re-run \`setup\` to recheck.`
-      : 'Setup complete — logged in, profile + directive set, and shared. Run `verify` anytime to confirm it all still works end-to-end.',
-    tell_owner: next ? ownerLine[next.step] : "You're all set up on Siobac — profile, rules, and your share link are ready.",
+      : 'Setup complete — tell the owner (in their language) they are all set: logged in, profile + directive set, and shared. Run `verify` anytime to confirm it all still works end-to-end.',
   })
 }
 

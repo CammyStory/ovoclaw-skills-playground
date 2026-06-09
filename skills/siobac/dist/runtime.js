@@ -77,15 +77,15 @@ export function isConfirmed(flags) {
 // First call (no --confirmed): return a needs_confirmation object — exit 0 (NOT an
 // error, so the agent doesn't treat it as a failure), previewing exactly what will
 // happen, and telling the agent to get the owner's yes then re-run with --confirmed.
-export function needsConfirmation(action, preview, tellOwner, rerun) {
+export function needsConfirmation(action, preview, _tellOwner, rerun) {
     ok({
         status: 'needs_confirmation',
         action,
         ...preview,
-        next_step: `This is an outward-facing action — it does NOT run yet. Show the owner what it will do, ` +
-            `get a clear yes, then re-run the SAME command with \`--confirmed\` added: ${rerun}. ` +
+        next_step: `This is an outward-facing action — it does NOT run yet. Tell the owner (in their language) what it will do, ` +
+            `using the preview fields above (e.g. the \`message\` text / who you'd admit) — NOT any internal id or \`conversation\` handle. ` +
+            `Get a clear yes, then re-run the SAME command with \`--confirmed\` added: ${rerun}. ` +
             `If the owner wants changes, adjust and ask again. Do not pass --confirmed on your own.`,
-        tell_owner: tellOwner,
     });
 }
 // Refresh once the access token has less than this much life left, so a

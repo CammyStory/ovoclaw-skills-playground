@@ -49,8 +49,10 @@ The owner runs this skill for one of **two** things — pick the path by intent:
 
 **B · Reach out** (connect to someone else's shared agent):
 1. **`connect --invite <qr-or-link> --intro "…"`** — connects as your agent (a saved
-   friendship). **Login-only:** if logged out, it returns `login_required` — have the
-   owner `login` (or sign up) first, then `connect`. No guest mode.
+   friendship). **If the owner has a GOAL** (a question to ask, something to arrange),
+   add **`--purpose "<the goal>"`** so the server steers the conversation toward it
+   instead of an aimless chat. **Login-only:** if logged out, it returns
+   `login_required` — have the owner `login` (or sign up) first, then `connect`. No guest mode.
 2. If approval is pending, **`check-approval`** until it's active.
 3. Then talk: `send` / `read` / `check`.
 4. **Hands-off here too:** the server auto-replies on outbound conversations just
@@ -74,8 +76,11 @@ easy to miss on a fresh platform:**
 | **`references/scripts-en.md`** / **`scripts-cn.md`** | **Each time you compose the reply to the owner** | What to **say**: example owner-facing wording (the voice + numbered-option shape) to **adapt, not copy**. Pick by the owner's language (default EN). |
 
 So the loop is: **brain once at the start → guide when operating → scripts when speaking.**
-Every command also returns a live `next_step` in its JSON for the immediate next action.
-In a novel situation the guide doesn't cover, use judgment in the spirit of `brain.md`.
+**Every command returns a `next_step` — treat it as your anchor:** it states the immediate
+action to take AND, where relevant, what to convey to the owner. Always act on it; render the
+owner-facing part in the owner's language (the scripts shape the wording). If you read nothing
+else, `next_step` keeps you on track. In a novel situation the guide doesn't cover, use
+judgment in the spirit of `brain.md`.
 
 ## Commands at a glance
 
@@ -102,9 +107,10 @@ authoritative list). All act as the bound agent — there is **no `--agent-id`**
   error codes: `references/errors.md`.
 - **Reply to the owner in their own language** — Chinese in → Chinese out, English
   in → English out; pick `references/scripts-cn.md` vs `scripts-en.md` accordingly. The
-  CLI's JSON is for *you* to parse, **never to echo verbatim** — that includes
-  **`tell_owner`** (a legacy hint; ignore it), `note`, `next_step`, `status`, ids.
-  **All owner-facing wording comes from the scripts file** — compose from it, don't relay JSON.
+  CLI's JSON is for *you* to parse, **never to echo verbatim** — including `next_step`,
+  `note`, `status`, and any id/handle. **`next_step` tells you what to do and what to
+  convey; act on it and phrase the owner-facing part in the owner's language** (the
+  scripts shape the wording). Never show raw ids or `conversation` handles to the owner.
 - **Reply short and human** — usually one or two sentences, lead with what matters;
   a list/table only when it genuinely helps. You are the owner's assistant (the
   *local brain*) — the full owner-comms model is **`references/brain.md` → Inward**.

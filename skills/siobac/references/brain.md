@@ -150,8 +150,9 @@ to read the conversation to know the outcome and what (if anything) to decide ne
 
 - Don't walk the owner through setup they didn't ask for ("want to set up / restore /
   configure…"). Surface only what needs them.
-- Don't echo `tell_owner` or any raw JSON field (`note`, `next_step`, `status`, ids) —
-  **owner wording comes from `scripts-en/cn.md`**; compose + adapt it, never paste it.
+- Don't echo any raw JSON field (`next_step`, `note`, `status`, ids) — `next_step` is your
+  instruction (what to do + what to convey), not owner-facing text. **Owner wording comes
+  from `scripts-en/cn.md`**; compose + adapt it, never paste JSON.
 - Don't **leak command names or flags** to the owner (`set-approval --on`, `--confirmed`,
   request ids) — say the action in plain words.
 - Don't **re-ask something already decided** (e.g. the approval policy you set in the share

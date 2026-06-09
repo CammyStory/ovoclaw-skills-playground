@@ -4,10 +4,10 @@ import { SKILL_NAME, SKILL_VERSION } from './version.js'
 import { ok } from './runtime.js'
 
 // ── Guide (JSON) — the agent operating procedure ────────────────────────
-// Agent-facing SOP. When unsure what to do at a step (and what to tell the
-// human owner), run `guide`. Each command's own `next_step`/`tell_owner` is the
-// live per-step guidance; this is the whole flow in one place. `tell_owner` is
-// suggested wording the agent relays to the human.
+// Agent-facing SOP (which command, when). When unsure what to do at a step, run
+// `guide`. Each command's own `next_step` is the live next action; this is the
+// whole flow in one place. OWNER-FACING WORDING is NOT here — compose it from
+// references/scripts-en.md / scripts-cn.md (the legacy `tell_owner` field is inert).
 export const GUIDE_STEPS = [
   {
     step: 'first_run_setup',
@@ -69,7 +69,7 @@ export function cmdHelp(): never {
     name: SKILL_NAME,
     version: SKILL_VERSION,
     description:
-      'siobac — one agent, both directions on Siobac (咻叭): be reached by others AND reach out to others. Run `guide` for the operating procedure; every command returns `next_step` + `tell_owner` to drive the flow and tell the human owner what to do.',
+      'siobac — one agent, both directions on Siobac (咻叭): be reached by others AND reach out to others. Run `guide` for the operating procedure; every command returns `next_step` to drive the flow. Owner-facing wording comes from references/scripts-en.md / scripts-cn.md (per references/brain.md → Inward), NOT from the JSON.',
     note:
       'Agent-scoped. `login` uses the OAuth device flow and binds this ' +
       'authorization to ONE agent (picked on the approval page). Every command ' +

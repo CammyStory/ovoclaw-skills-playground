@@ -200,14 +200,27 @@ async function cmdShareSelf(flags) {
     // unless the owner explicitly chose one.
     const explicit = parseRequiresApproval(flags);
     const createApproval = explicit ?? false; // default: auto-accept
+    const { auth, agentId } = await requireBoundAgent();
+    // ONBOARDING GATE (design-before-share): don't let an UNDESIGNED agent go live
+    // silently — a friend would otherwise reach an agent that doesn't know who it is.
+    // Detect a missing public profile and/or private rules and surface it for the owner.
+    const design = await api.getAgentProfile(auth.accessToken, agentId).catch(() => null);
+    const needsProfile = design ? !design.profile_complete : false;
+    const needsRules = design ? !design.directive_set : false;
+    const undesigned = needsProfile || needsRules;
+    const missing = [needsProfile ? 'a profile' : '', needsRules ? 'rules for how it acts' : ''].filter(Boolean).join(' and ');
     // CONSENT GATE — publishing the agent is outward-facing; confirm before it fires.
     if (!isConfirmed(flags)) {
         const policy = createApproval === false
             ? 'AUTO-ACCEPT — anyone with the link connects without your review (default; turn on with `set-approval --on`)'
             : 'approval required — you approve each new connection';
-        needsConfirmation('share-self', { will: 'Publish this agent and produce a shareable QR/link anyone you give it to can use to reach you.', approval_policy: policy }, `I'll publish you on Siobac and make a QR/link people can use to reach you (${createApproval === false ? 'auto-accepting new connections — you can switch to approval-required anytime with set-approval --on' : 'with your approval for each new connection'}). Want me to go ahead?`, 'share-self --confirmed (add --requires-approval if you want to approve each connection instead)');
+        needsConfirmation('share-self', { will: 'Publish this agent and produce a shareable QR/link anyone you give it to can use to reach you.', approval_policy: policy,
+            design_warning: undesigned ? `Not designed yet — missing ${missing}. Friends would reach an agent that doesn't know who it is. Recommend designing first (set-profile / set-directive).` : undefined }, undesigned
+            ? `Before I share you — you haven't set ${missing} yet, so friends would reach an agent that doesn't know who you are. Set ${needsProfile && needsRules ? 'those' : 'that'} up first, or share anyway?`
+            : `I'll publish you on Siobac and make a QR/link people can use to reach you (${createApproval === false ? 'auto-accepting new connections — you can switch to approval-required anytime with set-approval --on' : 'with your approval for each new connection'}). Want me to go ahead?`, undesigned
+            ? 'Design first: help the owner set the profile (set-profile --description "…") and rules (set-directive --content "…"). Only share anyway on a clear owner yes: share-self --confirmed'
+            : 'share-self --confirmed (add --requires-approval if you want to approve each connection instead)');
     }
-    const { auth, agentId } = await requireBoundAgent();
     let invite = await api.createShare(auth.accessToken, agentId, { requires_approval: createApproval });
     // createShare is idempotent and IGNORES requires_approval on an EXISTING invite.
     // Only change an existing invite's setting when the owner EXPLICITLY chose one

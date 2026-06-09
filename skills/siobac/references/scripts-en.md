@@ -48,6 +48,10 @@ dump JSON or tables (a short table only when several items genuinely need it).
 
 ## Step 2 — Share
 
+**Sharing an UNDESIGNED agent** (share-self returned a `design_warning`) — recommend design first:
+> Before I go live — you haven't set up your profile or rules yet, so friends would reach an
+> agent that doesn't know who you are. 1. ✏️ Set me up first · 2. 📤 Share anyway
+
 (The approval choice was already settled in the share confirmation — don't ask it again.)
 > Done — here's your QR / link, share it and people can reach me.
 > *[render qr_markdown inline]* {share_url}

@@ -29,13 +29,14 @@ dump JSON or tables (a short table only when several items genuinely need it).
 
 ## Step 0c — You're online (post-login hub)
 
-> ✅ **You're online** — I'm **{agent_name}** and I answer your friends automatically;
-> anything that needs you (a meeting, a payment, private info) I'll flag for your OK.
+Lead with the most-used action. Add a short status line (online + how many need you);
+keep it tight — the menu IS the hub, don't pad it with profile dumps.
+
+> ✅ **You're online**, **{agent_name}** — I handle your friends automatically and flag
+> anything that needs you.{ " **{n}** waiting." if any }
 >
-> **Profile** (public): {profile_description} · **Private rules:** set ✏️
->
-> 1. ✏️ Edit profile & rules · 2. 📤 Share me (link/QR) · 3. 📬 See what I've handled ·
-> 4. 💬 Talk to a friend · 5. ⏸️ Pause me
+> 1. 📬 What's new from friends · 2. 📤 Share me to friends · 3. 💬 Reach out to a friend ·
+> 4. ✏️ Manage profile/rules · 5. ⏸️ Pause me
 >
 > Reply with a number, or just tell me.
 
@@ -70,10 +71,27 @@ dump JSON or tables (a short table only when several items genuinely need it).
 
 ## Step 5 — Reach out
 
-> I'll reach out as you — a saved friendship that remembers them. Needs a quick login first
-> (no account yet is fine). 1. 🔑 Log in · 2. ❌ Not now
->
-> (Connected → "Connected to **{peer}**. 1. ✉️ Send a first message · 2. 👀 Wait for them")
+**Need the link (+ goal) — keep it to one line:**
+> Sure — paste their Siobac link, and what you'd like from it if you have a goal (e.g. "ask
+> about X" or "see if we could work together). 1. 🔗 I'll paste it · 2. ❌ Not now
+
+(Needs login first → "Quick login first (no account yet is fine). 1. 🔑 Log in · 2. ❌ Not now")
+
+**Connected — NEW friend (no prior history):**
+> Connected to **{peer}**. Want me to introduce you? 1. ✉️ Break the ice · 2. 👀 Wait for them
+
+**Connected — EXISTING friend (history exists — review it, respond IN CONTEXT, don't "break the ice"):**
+> You're already connected to **{peer}** — last time you talked about {topic}.
+> 1. ✍️ Pick up where you left off · 2. 💬 Say something new · 3. 👀 Just catch me up
+
+**Owner gave a GOAL → set it as the conversation's PURPOSE and let the agents pursue it
+(don't just translate one message):**
+> Got it — I'll have my agent get to know **{peer}** and {goal}, and flag anything that needs
+> you. 1. ▶️ Go ahead · 2. ✏️ Tweak the goal
+
+**Just sent (a conversation takes time + runs on its own — DON'T say "check for a reply"):**
+> Sent — I'll chat with **{peer}**'s agent and surface anything worth your attention.
+> 1. 📬 What's new · 2. 🏠 Back home
 
 ## Step 7 — Manage
 

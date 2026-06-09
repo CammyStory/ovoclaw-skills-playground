@@ -749,7 +749,7 @@ async function cmdConnect(flags: Record<string, string | true>) {
     const handle = await persistSession(res, slug, host)
     ok({
       status: res.status, conversation: handle, peer_name: res.peer_name ?? null, mode: 'registered', token_expires_at: res.token_expires_at,
-      next_step: `Connected. Tell the owner (in their language) you've connected${res.peer_name ? ` to ${res.peer_name}` : ' to their friend'} and offer to send a first message — DON'T show the \`conversation\` handle to the owner. To send, use \`send --conversation ${handle} --message "<text>"\` (it asks for confirmation first). If the owner has a GOAL for this reach-out (a question to ask, something to arrange), re-run \`connect\` with \`--purpose "<the goal>"\` so the server steers the conversation toward it.`,
+      next_step: `Connected${res.peer_name ? ` to ${res.peer_name}` : ''}. FIRST check whether this is an existing friendship: \`read --conversation ${handle}\` — if there are prior messages, summarize where things stand for the owner and respond IN CONTEXT (do NOT offer to "break the ice"); if it's brand-new, offer to introduce them. Tell the owner in their language; never show the \`conversation\` handle. If the owner has a GOAL, treat it as the conversation's PURPOSE — confirm it, re-run \`connect\` with \`--purpose "<the goal>"\`, and let the agents auto-converse toward it (the server pursues it and escalates what needs the owner); don't just translate one message. To send a specific line: \`send --conversation ${handle} --message "<text>"\`.`,
     })
   }
   if (res.status === 'awaiting_approval') {
@@ -864,7 +864,7 @@ async function cmdSend(flags: Record<string, string | true>) {
       message_id: res.message?.id, seq: res.message?.seq, reply_status: res.reply_status,
       verified: { persisted, seq: res.message?.seq ?? null },
       next_step: persisted
-        ? `Delivered. Tell the owner (in their language) the message was sent. The peer (or their server brain) will reply when ready — it shows up on \`read --conversation ${handle}\` or \`check\`; you don't poll/loop, just look when the owner asks.`
+        ? `Delivered. Tell the owner (in their language) you'll talk with their friend's agent to move things along — it runs on its own and takes a little time, and you'll surface anything worth their attention. Offer quick options like "What's new?" / "Back home" — do NOT nag them to "check for a reply".`
         : `The send returned WITHOUT a sequence number — it may NOT have been delivered. Do NOT tell the owner it sent; re-\`read --conversation ${handle}\` to confirm before retrying.`,
     })
   }

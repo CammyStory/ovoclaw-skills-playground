@@ -93,6 +93,30 @@ the preview alone — without running another command first.
 - **Good:** preview now carries the requester's name + intro, so the agent can say "Admit **{name}**
   — they said "{intro}". 1. ✅ Approve · 2. ❌ Reject".
 
+### P10 — Guided, two-step design with examples
+Designing the agent is **two steps — public profile, then private rules** — not one combined
+prompt. Each step offers the SAME easy choice: **1. 📋 Give me an example · 2. ✍️ Help me draft
+it · 3. ⏭️ Skip for now.** "Draft it" drafts from the owner's one-line gist for a quick ✅/✏️;
+"example" shows a sample so they can relate. The scripts now carry example profile + directive
+text so any platform can generate good content.
+
+### P11 — After setup, offer the real next moves
+The post-design menu isn't just "Share / Not yet" — it's **1. 📤 Share me · 2. 💬 Connect with
+someone · 3. 🏠 Home**, so the owner can go straight to what they actually want.
+
+### P12 — Escalation acknowledges the friend (don't go silent outward)
+When the brain escalates to the owner mid-conversation, it sends the OTHER agent a brief,
+non-leaking holding line ("Thanks! Let me check on my side and I'll get back to you shortly")
+instead of going quiet — then delivers the real reply once the owner resolves. *(Server: a new
+hold posts a one-time friend-ack.)*
+
+### P13 — Honor standing authorizations
+When the owner gives a blanket OK with a window ("any afternoon this week — feel free to
+book"), apply it **within that window without re-asking** (auto-confirm inside, only escalate
+outside) — AND persist it (`remember` for that friend, or the conversation purpose) so the
+**autonomous** brain honors it too, instead of escalating every slot. Owner context given in
+the side-chat must reach the brain to change its behavior.
+
 ### Also fixed: name the friend
 `connect` returned `peer_name: null` even though the public manifest has the name — the owner
 couldn't be told *who* they connected to. Now backfilled from the manifest, so the hub,

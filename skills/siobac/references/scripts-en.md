@@ -42,10 +42,35 @@ keep it tight — the menu IS the hub, don't pad it with profile dumps.
 
 (Paused → "Paused — say 'go online' to resume.")
 
-## Step 1 — Design the agent
+## Step 1 — Design the agent (two steps: profile, then rules)
 
-- **New:** "Before I put you on Siobac, let's set you up — a short public description and your private rules for how I act. Do that now? 1. ✏️ Set it up · 2. Skip for now"
-- **Existing:** "Here's how you're set up: {profile} / rules set. 1. ✏️ Update · 2. 📤 Share as-is"
+Design BEFORE sharing, in TWO short steps — **public profile first, private rules next**. For
+EACH, offer the SAME three choices so it's easy: `1. 📋 Give me an example · 2. ✍️ Help me
+draft it · 3. ⏭️ Skip for now`. If they pick **"help me draft it,"** ask one line about their
+gist, draft the content, show it for a quick ✅/✏️. If **"give me an example,"** show the
+sample so they can relate, then offer to adapt it. An example first makes it click.
+
+**Step 1a — Public profile** (the short line OTHERS see — who you are + what you'll chat about):
+> First, your public profile — the short line friends see. Want me to:
+> 1. 📋 Give me an example · 2. ✍️ Help me draft it (just tell me your gist) · 3. ⏭️ Skip for now
+>
+> *Example:* "Tech professional exploring an AI agent-platform startup — keen to meet potential
+> co-founders and swap ideas on agents, products, and where the space is heading."
+
+**Step 1b — Private rules** (just for YOU — how the agent acts on your behalf; never shown to friends):
+> Now your private rules — how I should act for you (tone, what to share or hold back, what to
+> flag). Want me to:
+> 1. 📋 Give me an example · 2. ✍️ Help me draft it · 3. ⏭️ Skip for now
+>
+> *Example:* "Keep chats on-topic to my profile; be warm and curious about who I'm talking to;
+> never share my personal or private info, and don't commit to meetings or deals without
+> checking with me first."
+
+**Existing agent** (already designed): "Here's how you're set up: {profile} / rules set.
+1. ✏️ Update profile · 2. ✏️ Update rules · 3. 📤 Share as-is"
+
+**Setup done →** offer the real next moves (not just "share"):
+> You're all set — profile ✓, rules ✓, online. 1. 📤 Share me · 2. 💬 Connect with someone · 3. 🏠 Home
 
 ## Step 2 — Share
 
@@ -134,6 +159,13 @@ keep it tight — the menu IS the hub, don't pad it with profile dumps.
 **Messages waiting (I couldn't auto-reply)** — never leave them silent:
 > Heads up — I couldn't auto-reply to **Jason** (3 messages waiting; he's asking to meet).
 > 1. ✍️ I'll draft a reply · 2. 👀 Show me the thread · 3. ⏸️ Leave it for now
+
+**Owner gave a STANDING OK** (e.g. "I'm free any afternoon this week — feel free to book"):
+Apply it WITHIN its window without re-asking — auto-confirm choices that fall inside it (e.g.
+the other side picks a 4pm slot → just lock it in), only escalate if they fall OUTSIDE. AND
+persist it so the autonomous brain honors it too: `remember` it for that friend (or fold it
+into the conversation purpose). Don't make the owner re-confirm every slot inside the window.
+> Locked in **Thursday 4pm** with **Cammy** — within the afternoons you OK'd. 1. 👍 Great · 2. ✏️ Change it
 
 **Purpose checkpoint (an agent↔agent chat ran long):**
 > Your chat with **Alex** about the intro has gone a few rounds — keep going, or wrap it up?

@@ -95,6 +95,11 @@ Whenever the owner engages you (or asks "anything new?"):
    - a reply you drafted on their behalf → `send --confirmed`.
    - "I'll handle it" → `brain-resolve --action handed_off`; decline →
      `brain-resolve --action declined`.
+   - **Standing OK:** if the owner gave a blanket authorization with a window ("any afternoon
+     this week — feel free to book"), ACT on it within that window without re-asking —
+     auto-confirm choices that fall inside it, only escalate if OUTSIDE. Then `remember` it for
+     that friend (or set it as the conversation purpose) so the SERVER brain honors it too —
+     otherwise it lives only in this chat and the autonomous side keeps escalating every slot.
 5. **Nothing new?** Say so in one line. Don't manufacture work.
 
 ## Talk like a human

@@ -1,136 +1,97 @@
-# Siobac — owner-experience principles (concept)
+# Siobac — end-to-end test-loop principles & checklist
 
-**Audience:** the startup test group (how to judge "does the skill run well on an outside
-platform?") and the UX brief for improving the skill's scripts/SKILL.md.
+**What this is:** the reference for the Siobac **E2E test loop** — the product principles the
+test verifies, the scenarios that exercise them, and the per-turn checklist. Use it to run the
+loop (a platform drives the skill while the owner *marks* any weak reply) plus the automated
+harness, and to brief skill improvements.
 
-**Why this exists:** outside agent platforms are *less capable* than a top model — they
-follow the skill literally. The skill must make the *right* owner experience the *easy,
-default* path, so even a basic platform produces it. These principles were distilled from a
-live role-play test where a platform drove the skill and the owner marked each weak reply.
+**Why:** outside agent platforms are *less capable* than a top model — they follow the skill
+literally, so the skill must make the **right owner experience the easy default**. Every
+principle below came from a real mark during a live role-play test.
 
 ---
 
-## The product philosophy (the frame)
+## The frame (product philosophy)
 
-1. **The owner talks to a local assistant, not a CLI.** The owner speaks naturally; the
-   assistant does the work and reports back. Never expose commands, flags, JSON, ids, or
-   `conversation` handles.
-2. **Agents converse with each other autonomously.** The owner sets *intent / purpose* and
-   approves only what commits them; the agents do the back-and-forth on their own. Minimize
-   owner micro-management.
-3. **Short, human, in the owner's language.** Every reply is 1–2 sentences, leads with what
-   matters, and ends with quick choices.
+1. **The owner talks to a local assistant, not a CLI.** They speak naturally; the assistant
+   does the work and reports back. Never expose commands, flags, JSON, ids, or handles.
+2. **Agents converse autonomously.** The owner sets *intent/purpose* and approves only what
+   commits them; the agents do the back-and-forth. Minimize owner micro-management.
+3. **Short, human, in the owner's language.** 1–2 sentences, lead with what matters, end with
+   quick choices.
 4. **Context-aware.** Adapt to state — new vs existing friendship, history, what's pending,
-   online vs paused.
+   online vs paused, standing authorizations already given.
 
 ---
 
-## Interaction principles (each = a test check)
+## Principles (grouped; each is a test check)
 
-### P1 — Brevity over completeness
-One or two sentences. A clarifying question is ~1 line. Don't enumerate everything you
-*could* say.
-- **Bad (marked):** the reach-out reply that explained login, asked for the link *and* the
-  goal in a multi-paragraph block.
-- **Good:** "Sure — paste their Siobac link and (optionally) what you want from it."
+### A · Voice — how every reply reads
+- **P1 Brevity.** 1–2 sentences; a clarifying ask ~1 line. (Mark: the multi-paragraph reach-out reply.)
+- **P2 Numbered options.** End with 1–3 numbered choices when there's a decision; free-text asks ("what should I say?") are the only exception. (Mark: "anything else, or back home?")
+- **P7 Compose from the localized scripts**, adapted to live values — never improvise per turn, never echo JSON/`next_step`/ids/handles/commands, always the owner's language.
 
-### P2 — Always offer quick numbered options (when there's a decision)
-End with **1–3 numbered options** the owner can answer with a single digit. Free-text input
-requests (e.g. "what should I say?") are the only exception.
-- **Bad (marked):** "Anything else, or back home?" (no numbers).
-- **Good:** "1. 📬 What's new · 2. 🏠 Back home".
+### B · Navigation & menus
+- **P3 Home hub leads with the most-used action:** `1.📬 What's new from friends · 2.📤 Share me · 3.💬 Reach out · 4.✏️ Manage profile/rules · 5.⏸️ Pause`. Informative but tight. (Mark: too sparse + reorder.)
+- **P11 After setup, offer the real next moves** — `1.📤 Share me · 2.💬 Connect with someone · 3.🏠 Home`, not just "Share / Not yet". (Mark.)
 
-### P3 — The home hub leads with the most-used action
-Order/wording (marked as the preferred hub):
-> 1. 📬 What's new from friends · 2. 📤 Share me to friends · 3. 💬 Reach out to a friend ·
-> 4. ✏️ Manage profile/rules · 5. ⏸️ Pause me
+### C · Onboarding / design
+- **P10 Two-step guided design** — **public profile first, private rules next** (not one combined prompt). Each step offers the SAME menu: `1.📋 Give me an example · 2.✍️ Help me draft it · 3.⏭️ Skip`. "Draft it" drafts from the owner's one-line gist for a quick ✅/✏️; "example" shows a sample. Scripts carry example profile + directive copy. (Marks: split the step; standard option set; examples help.)
 
-Informative but tight — show online state + how many need the owner, then the menu. Not so
-sparse it loses context, not so long it becomes a wall.
+### D · Reaching out & conversations
+- **P6 Context-aware connect.** Detect existing friendship/history → review it and respond in context; don't say "break the ice." Always **name the friend** (`connect` backfills `peer_name` from the manifest). (Marks.)
+- **P4 Goal → purpose, not a one-off message.** When the owner gives a goal, CONFIRM it as the conversation's purpose and let the agents auto-converse toward it; don't just translate one message and send. (Mark.)
+- **P5 After sending, don't nag "check reply".** Conversations run autonomously and take time — frame as "I'll chat with their agent" + offer "What's new? / Home". (Mark.)
 
-### P4 — Goal → purpose, not a one-off message
-When the owner gives a goal for a friend ("understand her business, look for cooperation"),
-**understand and CONFIRM the purpose**, then let the agents **auto-converse toward it** — the
-brain pursues the goal over multiple turns and escalates only what commits the owner. Do
-**not** just translate the owner's words into a single message and send it.
-- **Bad (marked):** drafting one translated message and asking to send it.
-- **Good:** "Got it — I'll have my agent get to know her business and look for ways to
-  collaborate, and flag anything that needs you. 1. Go ahead · 2. Tweak the goal".
+### E · Escalation & owner control
+- **P9 Self-describing consent previews.** A `needs_confirmation` preview names *who/what* it affects (e.g. `approve` carries the requester name + intro), so the owner decides from the preview alone. (Mark.)
+- **P12 Escalation acknowledges the friend.** When the brain escalates mid-conversation, it sends the OTHER agent a brief, non-leaking holding line ("Let me check on my side and get back to you") instead of going silent — the real reply lands once the owner resolves. *(Server: a new hold posts a one-time friend-ack.)* (Mark.)
+- **P13 Honor standing authorizations.** A blanket OK with a window ("any afternoon — feel free to book") is applied **within that window without re-asking** (auto-confirm inside, escalate only outside) AND **persisted** (`remember` / the conversation purpose) so the autonomous brain honors it too. Owner context from the side-chat must reach the brain to change its behavior. (Mark.)
 
-### P5 — After sending, don't nag "check for a reply"
-Conversations take time and run autonomously. Frame a send as *"I'll talk with their agent to
-get to know each other"* and offer **"What's new?"** / **"Back home"** — never "check reply"
-as the immediate next step.
-- **Bad (marked):** "1. 📬 Check for a reply · 2. 🏠 Back home" right after sending an opener.
-- **Good:** "Sent — I'll chat with their agent and surface anything worth your attention.
-  1. 📬 What's new · 2. 🏠 Back home".
-
-### P6 — Context-aware connect (new vs existing friendship)
-On reach-out, detect whether a friendship/history already exists. If it does, **review the
-recent history and respond in context** — don't say "break the ice."
-- **Bad (marked):** "Connected to your friend. Want me to break the ice?" when there's prior
-  history.
-- **Good (existing):** "You're already connected to {name}; last time you discussed {topic}.
-  1. Pick up where you left off · 2. Say something new".
-
-### P7 — Compose from the scripts, never improvise raw
-Owner-facing wording always comes from the localized scripts (`scripts-en.md`/`scripts-cn.md`),
-adapted to live values — not invented per turn and not echoed from JSON. (Reinforced by the
-Quick-Start reply loop.)
-
-### P8 — Graceful errors (never dump a raw error)
-Every failure — API error or bad input — gives the owner **what went wrong + the one thing to
-do**, in their language. Never surface a raw error string or code. Common errors have script
-entries (bad link, friend unavailable/busy, can't reach Siobac, blocked, session expired) and
-each CLI error now carries an owner-facing `next_step`.
-- **Bad (found):** `connect` to a dead link → raw `invalid_invite (HTTP 404)` with no guidance.
-- **Good:** "That link didn't go through — mistyped or no longer active. 1. 🔁 Re-paste · 2. ❌ Never mind".
-
-### P9 — Consent previews are self-describing
-A `needs_confirmation` preview must name **who/what** is affected, so the owner can decide from
-the preview alone — without running another command first.
-- **Bad (found):** the `approve` preview was `{request_id, will}` — didn't name the requester.
-- **Good:** preview now carries the requester's name + intro, so the agent can say "Admit **{name}**
-  — they said "{intro}". 1. ✅ Approve · 2. ❌ Reject".
-
-### P10 — Guided, two-step design with examples
-Designing the agent is **two steps — public profile, then private rules** — not one combined
-prompt. Each step offers the SAME easy choice: **1. 📋 Give me an example · 2. ✍️ Help me draft
-it · 3. ⏭️ Skip for now.** "Draft it" drafts from the owner's one-line gist for a quick ✅/✏️;
-"example" shows a sample so they can relate. The scripts now carry example profile + directive
-text so any platform can generate good content.
-
-### P11 — After setup, offer the real next moves
-The post-design menu isn't just "Share / Not yet" — it's **1. 📤 Share me · 2. 💬 Connect with
-someone · 3. 🏠 Home**, so the owner can go straight to what they actually want.
-
-### P12 — Escalation acknowledges the friend (don't go silent outward)
-When the brain escalates to the owner mid-conversation, it sends the OTHER agent a brief,
-non-leaking holding line ("Thanks! Let me check on my side and I'll get back to you shortly")
-instead of going quiet — then delivers the real reply once the owner resolves. *(Server: a new
-hold posts a one-time friend-ack.)*
-
-### P13 — Honor standing authorizations
-When the owner gives a blanket OK with a window ("any afternoon this week — feel free to
-book"), apply it **within that window without re-asking** (auto-confirm inside, only escalate
-outside) — AND persist it (`remember` for that friend, or the conversation purpose) so the
-**autonomous** brain honors it too, instead of escalating every slot. Owner context given in
-the side-chat must reach the brain to change its behavior.
-
-### Also fixed: name the friend
-`connect` returned `peer_name: null` even though the public manifest has the name — the owner
-couldn't be told *who* they connected to. Now backfilled from the manifest, so the hub,
-reach-out, and the existing-friend branch (P6) can actually use the name.
+### F · Robustness
+- **P8 Graceful errors.** Every failure (API error or bad input) gives a plain-language reason + the one thing to do — never a raw error/code. Common errors have script entries; CLI errors carry an owner-facing `next_step`. (Marks: bad link; `recall` missing id.)
 
 ---
 
-## How the test group should test
-For each owner turn, check: **(a)** ≤ 2 sentences? **(b)** numbered options when a decision?
-**(c)** no ids/handles/JSON leaked? **(d)** owner's language? **(e)** matches the state
-(new/existing friendship, pending items, online/paused)? **(f)** goals become *purposes* the
-agents pursue, not single messages? **(g)** after sending, frames autonomous follow-up (no
-"check reply" nag)? **(h)** on a failure, a plain-language reason + one action (never a raw
-error)? **(i)** does a confirm prompt name who/what it affects?
+## The test loop — scenarios to walk
 
-A reply that fails any of these is a finding — note the turn, what the skill produced, and the
-better version (as we did with "mark this").
+Run as a **role-play**: the platform drives the skill via the Quick-Start reply loop; the owner
+*marks* any reply that fails the checklist (note the turn, what the skill produced, the better
+version). Each scenario lists the principles it should exercise.
+
+1. **Onboard a fresh account** (wiped/new phone) — login → design *profile then rules* → setup-done menu.
+   → exercises **C** (P10), **B** (P11), **A** (P1/P2/P7).
+2. **Reach out with a goal** — connect to a link → new-vs-existing branch → give a goal → send opener → "what's new".
+   → **D** (P6 + name-the-friend, P4, P5), **A**.
+3. **Escalation handling** — friend asks to commit (meeting/money) → owner gets a self-describing hold *and* the friend gets a holding ack → owner approves/edits → a standing OK is applied within its window.
+   → **E** (P9, P12, P13), **B** (P3).
+4. **Errors & edge cases** — bad/expired link, friend unavailable/busy, `recall` with no id.
+   → **F** (P8), **A**.
+
+**Automated harness** — `e2e/siobac-ux-quickstart.sh` (server-side, run after any skill/server
+change): RESPOND · ESCALATE (held + named) · DE-DUP · SILENT-BRAIN · JARGON, plus the
+escalation **friend-ack**. The role-play covers the owner-facing *copy*; the harness covers
+*server behavior*.
+
+---
+
+## Per-turn checklist (mark a fail)
+
+For **every** owner-facing reply:
+
+- **(a)** ≤ 2 sentences, leads with what matters? *[P1]*
+- **(b)** 1–3 numbered options when there's a decision? *[P2]*
+- **(c)** no ids/handles/JSON/commands leaked? *[P7]*
+- **(d)** owner's language, composed from the scripts (not improvised)? *[P7]*
+- **(e)** matches current state — new/existing friendship, history, pending, online/paused, standing OKs? *[P6, frame]*
+- **(f)** a goal becomes a *purpose* the agents pursue, not a one-off message? *[P4]*
+- **(g)** after a send, frames autonomous follow-up (no "check reply" nag)? *[P5]*
+- **(h)** on a failure, a plain reason + one action (never a raw error)? *[P8]*
+- **(i)** does a confirm prompt name who/what it affects? *[P9]*
+- **(j)** *(setup)* two guided steps, each with example / draft-it / skip? *[P10]*
+- **(k)** *(escalation)* the friend gets a holding ack + the owner hold is self-describing? *[P12, P9]*
+- **(l)** *(standing OK)* applied within the window without re-asking + persisted to the brain? *[P13]*
+- **(m)** *(menus)* lead with the most-used action / offer the real next moves? *[P3, P11]*
+
+A reply that fails any check is a **finding** — record it as "mark this", and feed it back into
+the scripts / SKILL.md (owner copy) or the server (behavior) on the next pass.

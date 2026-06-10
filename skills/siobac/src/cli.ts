@@ -362,7 +362,9 @@ async function cmdSetApproval(flags: Record<string, string | true>) {
     requires_approval: invite.requires_approval,
     slug: invite.slug,
     share_url: shareUrlFor(invite.slug),
-    note: 'Your existing share LINK and QR are UNCHANGED — only whether new connections need your approval changed. Do NOT regenerate or re-share the link; the same one still works.',
+    next_step: invite.requires_approval
+      ? "Tell the owner (in their language) that NEW connection requests now need their OK before anyone can talk to the agent — they'll appear via `requests` / `check`. Their existing share link/QR is UNCHANGED; don't re-share or regenerate it."
+      : "Tell the owner (in their language) that new connections now AUTO-ACCEPT (no approval needed). Their existing share link/QR is UNCHANGED; don't re-share or regenerate it.",
   })
 }
 
@@ -450,10 +452,20 @@ async function cmdAcceptPending(flags: Record<string, string | true>) {
   // CONSENT GATE — approving admits someone to talk to the agent; confirm first.
   if (!isConfirmed(flags)) {
     const requestId = requireString(flags, 'request-id', 'approve')
+    // P9 — name WHO is being admitted in the preview, so the owner can decide from
+    // the gate alone (don't make them run `requests` first). Best-effort lookup.
+    const auth = await loadAuth()
+    let requester = 'this requester'
+    let intro = ''
+    if (auth?.agentId) {
+      const inbox: any = await api.fetchInbox(auth.accessToken).catch(() => null)
+      const r = inbox?.pending_requests?.find((p: any) => (p.id ?? p.request_id) === requestId)
+      if (r) { requester = r.from?.agent_name || requester; intro = r.intro_text || '' }
+    }
     needsConfirmation(
       'approve',
-      { request_id: requestId, will: 'Admit this requester — they can then exchange messages with your agent.' },
-      "Approve this connection request so they can talk to me? (Run `requests` first if you want to review who's asking.)",
+      { request_id: requestId, requester, intro, will: `Admit ${requester} — they can then exchange messages with your agent.` },
+      'Approve this connection request so they can talk to me?',
       `approve --request-id ${requestId} --confirmed`,
     )
   }
@@ -483,7 +495,8 @@ async function cmdRotateToken(flags: Record<string, string | true>) {
 // never change them; `remember` only writes friend-scoped memory.
 
 async function cmdRecall(flags: Record<string, string | true>) {
-  const connectionId = optionalString(flags, 'conversation') ?? requireString(flags, 'connection-id', 'recall')
+  const connectionId = optionalString(flags, 'conversation') ?? optionalString(flags, 'connection-id')
+    ?? (() => { throw new CliError('recall needs a conversation — pass `--conversation <id>`. Get the id from `check` or `list-connections` (a connection) / `conversations` (the `conversation` value). recall loads your memory of that friend so you reply in character.') })()
   // OUTBOUND conversations (ones THIS agent started — handle s_…) live in
   // sessions.json, not as an inbound connection on this agent. Per-friend memory
   // is owner/inbound-only, so there's no friend_memory to fetch — but a logged-in
@@ -535,7 +548,8 @@ async function cmdRecall(flags: Record<string, string | true>) {
 }
 
 async function cmdRemember(flags: Record<string, string | true>) {
-  const connectionId = optionalString(flags, 'conversation') ?? requireString(flags, 'connection-id', 'remember')
+  const connectionId = optionalString(flags, 'conversation') ?? optionalString(flags, 'connection-id')
+    ?? (() => { throw new CliError('remember needs a conversation — pass `--conversation <id>` (from `check` / `list-connections` / `conversations`), plus what to save (`--summary "<text>"` and/or `--deltas <json>`). It records what you learned about that friend for next time.') })()
   // OUTBOUND conversations have no inbound friendship row to attach memory to —
   // per-friend memory is stored only for connections others make to YOU. Return
   // a clear no-op instead of a confusing 404 from the owner-side memory endpoint.
@@ -746,6 +760,12 @@ async function cmdConnect(flags: Record<string, string | true>) {
   }, auth!.accessToken)
 
   if (res.status === 'active' || res.status === 'reauthorized' || res.status === 'already_connected') {
+    // Surface the friend's NAME so the owner can be told WHO they connected to. The
+    // connect response sometimes omits peer_name; the public manifest always has it.
+    if (!res.peer_name) {
+      const m = await api.getManifest(host, slug).catch(() => null)
+      if (m?.agent?.name) res.peer_name = m.agent.name
+    }
     const handle = await persistSession(res, slug, host)
     ok({
       status: res.status, conversation: handle, peer_name: res.peer_name ?? null, mode: 'registered', token_expires_at: res.token_expires_at,

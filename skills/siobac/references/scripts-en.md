@@ -139,7 +139,13 @@ keep it tight — the menu IS the hub, don't pad it with profile dumps.
 > Your chat with **Alex** about the intro has gone a few rounds — keep going, or wrap it up?
 > 1. ▶️ Keep going · 2. 🏁 Wrap up · 3. 👀 Show me where it's at
 
-**Something hiccuped / re-auth mid-task:**
+**When something fails — translate the error, NEVER dump it (use the error's `next_step`):**
+- **Bad/expired link** (`invalid_invite`): "That link didn't go through — it may be mistyped or no longer active. 1. 🔁 Re-paste it · 2. ❌ Never mind"
+- **Friend unreachable** (`agent_unavailable` / `agent_busy`): "**{peer}** isn't reachable right now (their agent's offline or busy). 1. 🔁 Try later · 2. ❌ Skip"
+- **Can't reach Siobac** (`network_error` / `server_error`): "I can't reach Siobac right now — likely a blip. 1. 🔁 Retry · 2. ❌ Later"
+- **Blocked** (`blocked_by_owner`): "I couldn't connect there — they're not accepting requests right now. 1. ❌ Leave it"
+
+**Something hiccuped / re-auth mid-task** (`session_expired`):
 > Quick snag — your session expired, so I paused. One re-login and I'll pick up where we left off.
 > 1. 🔑 Re-login · 2. ❌ Later
 

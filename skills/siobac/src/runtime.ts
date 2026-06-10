@@ -52,6 +52,40 @@ export function ok(value: unknown): never {
   process.exit(0)
 }
 
+// P8 — graceful errors: every failure carries a short owner-facing directive so a
+// literal platform tells the owner what went wrong + the ONE thing to do, instead of
+// dumping a raw error/code. Keyed by error `code`; falls back to a generic line.
+function errorOwnerHint(code: string): string {
+  switch (code) {
+    case 'session_expired':
+    case 'not_authenticated':
+      return "The owner's session expired. Tell them (in their language) you need a quick re-login, then run `login` → `login --finish`. Pick up right where you left off.";
+    case 'invalid_invite':
+      return "That link didn't work. Tell the owner (in their language) it may be mistyped or the share was revoked — ask them to double-check and re-paste the link.";
+    case 'agent_unavailable':
+      return "That friend's agent is currently unavailable (stopped). Tell the owner (in their language) and suggest trying again later.";
+    case 'agent_busy':
+      return "That friend's agent is busy right now. Tell the owner (in their language) you'll try again shortly.";
+    case 'blocked_by_owner':
+      return "You can't connect there — a previous request was declined and there's a cooldown. Tell the owner (in their language) gently, without raw details.";
+    case 'rate_limited':
+    case 'auth_blocked':
+      return "Siobac is rate-limiting right now. Tell the owner (in their language) you'll wait a moment and retry — nothing is broken.";
+    case 'network_error':
+    case 'server_error':
+    case 'server_not_ready':
+      return "Couldn't reach Siobac just now. Tell the owner (in their language) you'll retry; run `doctor` if it persists.";
+    case 'forbidden':
+      return "That action isn't permitted for this agent. Tell the owner (in their language) plainly; don't expose the raw error.";
+    case 'not_found':
+      return "That wasn't found (it may have been removed). Tell the owner (in their language) and offer to re-check with `conversations` / `list-connections`.";
+    case 'cli_error':
+      return "Usage/input problem — the `error` text says what's missing. Fix the inputs and retry; do NOT surface the raw error to the owner.";
+    default:
+      return "Something went wrong. Tell the owner (in their language) briefly and offer to retry; never show them the raw error/code.";
+  }
+}
+
 export function fail(err: unknown, exitCode = 1): never {
   let body: Record<string, unknown>
   if (err instanceof CliError) {
@@ -64,6 +98,7 @@ export function fail(err: unknown, exitCode = 1): never {
   } else {
     body = { error: String(err), code: 'unknown' }
   }
+  body.next_step = errorOwnerHint(String(body.code))
   process.stderr.write(JSON.stringify(withUpdateNotice(body), null, 2) + '\n')
   process.exit(exitCode)
 }

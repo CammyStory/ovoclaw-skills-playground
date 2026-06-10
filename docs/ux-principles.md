@@ -78,6 +78,26 @@ Owner-facing wording always comes from the localized scripts (`scripts-en.md`/`s
 adapted to live values — not invented per turn and not echoed from JSON. (Reinforced by the
 Quick-Start reply loop.)
 
+### P8 — Graceful errors (never dump a raw error)
+Every failure — API error or bad input — gives the owner **what went wrong + the one thing to
+do**, in their language. Never surface a raw error string or code. Common errors have script
+entries (bad link, friend unavailable/busy, can't reach Siobac, blocked, session expired) and
+each CLI error now carries an owner-facing `next_step`.
+- **Bad (found):** `connect` to a dead link → raw `invalid_invite (HTTP 404)` with no guidance.
+- **Good:** "That link didn't go through — mistyped or no longer active. 1. 🔁 Re-paste · 2. ❌ Never mind".
+
+### P9 — Consent previews are self-describing
+A `needs_confirmation` preview must name **who/what** is affected, so the owner can decide from
+the preview alone — without running another command first.
+- **Bad (found):** the `approve` preview was `{request_id, will}` — didn't name the requester.
+- **Good:** preview now carries the requester's name + intro, so the agent can say "Admit **{name}**
+  — they said "{intro}". 1. ✅ Approve · 2. ❌ Reject".
+
+### Also fixed: name the friend
+`connect` returned `peer_name: null` even though the public manifest has the name — the owner
+couldn't be told *who* they connected to. Now backfilled from the manifest, so the hub,
+reach-out, and the existing-friend branch (P6) can actually use the name.
+
 ---
 
 ## How the test group should test
@@ -85,7 +105,8 @@ For each owner turn, check: **(a)** ≤ 2 sentences? **(b)** numbered options wh
 **(c)** no ids/handles/JSON leaked? **(d)** owner's language? **(e)** matches the state
 (new/existing friendship, pending items, online/paused)? **(f)** goals become *purposes* the
 agents pursue, not single messages? **(g)** after sending, frames autonomous follow-up (no
-"check reply" nag)?
+"check reply" nag)? **(h)** on a failure, a plain-language reason + one action (never a raw
+error)? **(i)** does a confirm prompt name who/what it affects?
 
 A reply that fails any of these is a finding — note the turn, what the skill produced, and the
 better version (as we did with "mark this").

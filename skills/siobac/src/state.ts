@@ -244,6 +244,19 @@ export interface BoundAgentState {
   agentId: string
   agentName?: string
   boundAt: string  // ISO 8601
+  // Set the first time the owner confirms/sets the agent's NAME (`set-profile --name`).
+  // The server has no "name confirmed" flag (a new agent ships with an auto-name), so
+  // the setup checklist tracks confirmation HERE — otherwise the name step could never
+  // read as done for a brand-new agent. ISO 8601.
+  nameConfirmedAt?: string
+}
+
+// Mark the bound agent's NAME as confirmed (idempotent; no-op if no binding yet).
+// Called when the owner sets the name via `set-profile --name`.
+export async function markNameConfirmed(): Promise<void> {
+  const bound = await loadBoundAgent()
+  if (!bound || bound.nameConfirmedAt) return
+  await saveBoundAgent({ ...bound, nameConfirmedAt: new Date().toISOString() })
 }
 
 export async function loadBoundAgent(): Promise<BoundAgentState | null> {

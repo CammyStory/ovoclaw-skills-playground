@@ -3,7 +3,7 @@
 import { promises as fs } from 'node:fs';
 import { platform, arch } from 'node:os';
 import * as api from './api.js';
-import { stateDir, authFilePath, ensureAgentBinding, loadAuth, isAuthFileWriteable, listSessions, } from './state.js';
+import { stateDir, authFilePath, ensureAgentBinding, loadAuth, loadBoundAgent, isAuthFileWriteable, listSessions, } from './state.js';
 import { SKILL_NAME, SKILL_VERSION } from './version.js';
 import { ok, withUpdateNotice, skillDir, updateInstruction, requireBoundAgent, shareUrlFor, verifyShareResolves } from './runtime.js';
 export async function cmdDoctor() {
@@ -260,12 +260,13 @@ export async function cmdSetup(_flags) {
             complete: false,
             steps: [
                 { step: 'login', done: false, label: 'Log in (bind this skill to your Siobac agent)', command: 'login' },
+                { step: 'name', done: false, label: 'Confirm the agent\'s name', command: 'set-profile --name "…"' },
                 { step: 'profile', done: false, label: 'Public profile (what others see)', command: 'set-profile --description "…"' },
                 { step: 'directive', done: false, label: 'Private directive (how you act on their behalf)', command: 'set-directive --content "…"' },
                 { step: 'share', done: false, label: 'Share (become reachable via QR/link)', command: 'share-self --confirmed' },
             ],
             next_action: 'login',
-            next_step: 'Tell the owner (in their language) you\'ll get them set up on Siobac, starting with a quick login. Then run `login` (two-step: `login`, then `login --finish` after the owner approves), then profile + directive, then `share-self`.',
+            next_step: 'Tell the owner (in their language) you\'ll get them set up on Siobac, starting with a quick login. Then run `login` (two-step: `login`, then `login --finish` after the owner approves), then design in order — name → profile → directive — then `share-self`.',
         });
         return;
     }
@@ -307,8 +308,14 @@ export async function cmdSetup(_flags) {
         });
         return;
     }
+    // Name step: the server has no "name confirmed" flag (a new agent ships with an
+    // auto-name), so confirmation is tracked locally (set by `set-profile --name`). An
+    // EXISTING (non-new) agent was already designed, so treat its name as confirmed.
+    const bound = await loadBoundAgent();
+    const nameConfirmed = !profile.is_new || !!bound?.nameConfirmedAt;
     const steps = [
         { step: 'login', done: true, label: 'Logged in' },
+        { step: 'name', done: nameConfirmed, label: 'Confirm the agent\'s name', command: 'set-profile --name "…"' },
         { step: 'profile', done: profile.profile_complete, label: 'Public profile (what others see)', command: 'set-profile --description "…"' },
         { step: 'directive', done: profile.directive_set, label: 'Private directive (how you act on their behalf)', command: 'set-directive --content "…"' },
         { step: 'share', done: shared, label: 'Shared (reachable via QR/link)', command: 'share-self --confirmed' },

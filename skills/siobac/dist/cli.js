@@ -2,7 +2,7 @@
 import { constants as fsConstants } from 'node:fs';
 import { parseArgs, requireString, optionalString, CliError, } from './argparse.js';
 import * as api from './api.js';
-import { authFilePath, ensureAgentBinding, loadAuth, saveAuth, clearAuth, loadBoundAgent, saveBoundAgent, savePendingLogin, loadPendingLogin, clearPendingLogin, saveSession, getSession, listSessions, deleteSession, updateSession, newSessionHandle, migrateLegacyState, } from './state.js';
+import { authFilePath, ensureAgentBinding, loadAuth, saveAuth, clearAuth, loadBoundAgent, saveBoundAgent, markNameConfirmed, savePendingLogin, loadPendingLogin, clearPendingLogin, saveSession, getSession, listSessions, deleteSession, updateSession, newSessionHandle, migrateLegacyState, } from './state.js';
 import { parseInvite } from './invite.js';
 import { cmdDoctor, cmdVerify, cmdSetup } from './diagnostics.js';
 import { cmdGuide, cmdHelp } from './guide.js';
@@ -157,9 +157,9 @@ async function cmdLoginFinish(_flags) {
         auto_go_online: true,
         next_step: prof
             ? (prof.is_new
-                ? 'YOU ARE ONLINE BY DEFAULT — once this agent is shared, the SERVER answers friends automatically the moment they message, and ESCALATES anything that commits the owner (meeting/money/scheduling/sensitive/off-directive/impersonation) for approval. Nothing to arm — server-driven (see references/brain.md). Relay the ONLINE hub. This agent is NEW, so guide the owner through design in THREE steps (scripts → Step 1): (1) NAME — confirm or change the auto-name via `set-profile --name "…"`; (2) PUBLIC profile `set-profile --description "…"`; (3) PRIVATE directive `set-directive --content "…"`. When you show an example, ADAPT it to the owner — never save the sample verbatim. Then `share-self` for the QR/link. Pause auto-replies with `pause`; resume with `go-online`.'
-                : 'YOU ARE ONLINE BY DEFAULT — the SERVER answers friends automatically and ESCALATES anything that commits the owner (meeting/money/scheduling/sensitive/off-directive/impersonation) for approval. Nothing to arm — server-driven (see references/brain.md). Relay the ONLINE hub showing the current `profile`/`directive`. The owner can update profile/rules (`set-profile`/`set-directive`), `share-self`, `pause` (manual), or `go-online` (resume). Escalations surface in the inbox (`owner-channel` / `brain-pending`) to approve or decline.')
-            : 'You are online by default — the server auto-replies and escalates; nothing to arm. Relay the online hub.',
+                ? 'This agent is NEW — not shared, and not designed yet, so NO ONE can reach it and there is nothing live to relay. Do NOT tell the owner they are "online". Lead with DESIGN, in THREE ordered steps (scripts → Step 1), adapting every example to the owner (never save a sample verbatim): (1) NAME — confirm or change the auto-assigned name via `set-profile --name "…"`; (2) PUBLIC profile — `set-profile --description "…"`; (3) PRIVATE directive (how it acts on their behalf) — `set-directive --content "…"`. THEN `share-self` for the QR/link. Only once SHARED does the server answer friends automatically and ESCALATE anything that commits the owner (meeting/money/scheduling/sensitive/off-directive/impersonation) — nothing to arm, it is server-driven (references/brain.md); after sharing, `pause` halts auto-replies and `go-online` resumes.'
+                : 'This agent is already designed and online by default — the SERVER answers friends automatically and ESCALATES anything that commits the owner (meeting/money/scheduling/sensitive/off-directive/impersonation) for approval. Nothing to arm — server-driven (references/brain.md). Relay the hub showing the current `profile`/`directive`; the owner can update them (`set-profile`/`set-directive`), `share-self`, `pause` (manual), or `go-online` (resume). Escalations surface in the inbox (`owner-channel` / `brain-pending`) to approve or decline.')
+            : 'Logged in. Relay the hub; if this is a new agent, lead with design (name → profile → directive) before sharing.',
         remember: rememberLabel
             ? `You are now sharing the Siobac agent "${rememberLabel}" (id ${auth.agentId}). ` +
                 `Record this in your durable memory as your Siobac agent. Next time you log in, ` +
@@ -245,7 +245,7 @@ async function cmdShareSelf(flags) {
             ? 'DISPLAY THE QR INLINE: render it as an image so the user sees a scannable QR, not a link — drop the ready-made `qr_markdown` straight into your reply (it is `![](qr_url)`). Also give `share_url` as a copyable link. Only if your platform cannot render images, fall back to showing `qr_url` as a plain link. (createInvite is idempotent — an already-shared agent returns its existing invite.) The link was VERIFIED to resolve to this agent.'
             : `CAUTION: the share was created but did NOT verify — the link did not resolve back to this agent (${verified.reason ?? 'unknown'}). Do NOT tell the owner it is ready. Re-run \`share-self\`, check connectivity with \`doctor\`, or run \`verify\` for detail before handing out the QR.`,
         next_step: linkWorks
-            ? 'If you have not already, help the owner DESIGN their agent so others understand who they are: set the private DIRECTIVE (`set-directive --content "…"` — the rules/purpose for how you reply on their behalf) and confirm the PUBLIC PROFILE (name/description) is accurate. Then, when a friend connects, use `recall` before replying and `remember` after (see Step 6 in references/guide.md, or run `guide --step serve_incoming`).'
+            ? 'If you have not already, help the owner DESIGN their agent so others understand who they are, in order: (1) confirm the NAME (`set-profile --name "…"`); (2) PUBLIC profile (`set-profile --description "…"`); (3) PRIVATE directive (`set-directive --content "…"` — the rules/purpose for how you reply on their behalf). Then, when a friend connects, use `recall` before replying and `remember` after (see Step 6 in references/guide.md, or run `guide --step serve_incoming`).'
             : 'Share verification FAILED — resolve that first. Run `verify` for the full check, or `doctor` for connectivity, then `share-self` again. Do not surface the QR as working until `verified.share_resolves` and `verified.points_back` are both true.',
     });
 }
@@ -267,10 +267,17 @@ async function cmdListShares() {
             : "To show a share to the owner, render its `qr_markdown` inline as an IMAGE (it is `![](qr_url)`) so they see a scannable QR, plus `share_url` as a copyable link — never just the raw URL. To change who-can-connect use `set-approval` (same link); to replace it use `regenerate-share`.",
     });
 }
-async function cmdRevokeShare() {
+async function cmdRevokeShare(flags) {
+    // CONSENT GATE — revoking kills the link/QR the owner already handed out; confirm.
+    if (!isConfirmed(flags)) {
+        needsConfirmation('revoke-share', { will: 'Revoke this agent\'s share. The current link/QR stops working for anyone who has it. People ALREADY connected stay connected. To be reachable again you\'d run `share-self` for a NEW link.' }, 'Revoke your share link so the current QR/link stops working? (people already connected stay connected)', 'revoke-share --confirmed');
+    }
     const { auth, agentId } = await requireBoundAgent();
     const result = await api.revokeShare(auth.accessToken, agentId);
-    ok({ status: 'revoked', agent_id: agentId, ...result });
+    ok({
+        status: 'revoked', agent_id: agentId, ...result,
+        next_step: 'Share revoked — tell the owner (in their language) their old link/QR no longer works; people already connected are unaffected. To become reachable again, run `share-self` for a fresh link.',
+    });
 }
 // Toggle whether NEW connections need the owner's approval. Changes the setting
 // IN PLACE — the existing share link/QR is UNCHANGED (never regenerate the slug
@@ -301,6 +308,10 @@ async function cmdSetApproval(flags) {
     });
 }
 async function cmdRegenerateShare(flags) {
+    // CONSENT GATE — regenerating rotates the slug and REVOKES every old link/QR.
+    if (!isConfirmed(flags)) {
+        needsConfirmation('regenerate-share', { will: 'Mint a NEW share link/QR and REVOKE the old one — every link/QR you already handed out STOPS working. People already connected are unaffected. (To change who-can-connect WITHOUT a new link, use `set-approval` instead.)' }, 'Replace your share link with a new one? Every old QR/link will stop working (existing connections stay).', 'regenerate-share --confirmed');
+    }
     const requiresApproval = parseRequiresApproval(flags);
     const { auth, agentId } = await requireBoundAgent();
     const invite = await api.regenerateShare(auth.accessToken, agentId, { requires_approval: requiresApproval });
@@ -371,7 +382,30 @@ async function actOnConnectionCmd(flags, cmd, idFlag, action, doneStatus) {
                     : '') +
                 `When the agent is online, the SERVER handles this conversation automatically (RESPOND/ESCALATE) — just watch with \`check\`.`;
     }
+    else {
+        // Plain-language outcome for the owner on the other connection actions, so the
+        // agent always has something to relay (never a bare status).
+        const nextByAction = {
+            disconnect: 'Disconnected — tell the owner (in their language) that connection is closed: that person can no longer message this agent. They would need a fresh invite/QR to reconnect.',
+            'rotate-token': 'Connection key refreshed — tell the owner (in their language) it was a routine SECURITY reset, NOT a disconnect: the friend stays connected and their app re-authenticates automatically on its next message. Nothing else to do.',
+            pause: 'Paused — tell the owner (in their language) that connection is on hold: incoming messages won\'t be auto-answered until they `resume-connection --connection-id <id>`.',
+            resume: 'Resumed — tell the owner (in their language) that connection is active again; the server auto-answers when the agent is online.',
+            reject: 'Request rejected — tell the owner (in their language) you declined it; that requester was NOT admitted and cannot message the agent.',
+        };
+        if (nextByAction[action])
+            out.next_step = nextByAction[action];
+    }
     ok(out);
+}
+// Best-effort: resolve a connection id to the friend's display name for a consent
+// preview, so the gate can name WHO instead of a raw id. Falls back to a neutral label.
+async function connectionWho(connectionId) {
+    const auth = await loadAuth();
+    if (!auth?.agentId)
+        return 'this connection';
+    const conns = await api.listConnections(auth.accessToken, auth.agentId).catch(() => []);
+    const c = conns.find((x) => x.id === connectionId);
+    return c?.shadow_name || 'this connection';
 }
 async function cmdAcceptPending(flags) {
     // CONSENT GATE — approving admits someone to talk to the agent; confirm first.
@@ -404,9 +438,23 @@ async function cmdResumeConnection(flags) {
     return actOnConnectionCmd(flags, 'resume-connection', 'connection-id', 'resume', 'resumed');
 }
 async function cmdDisconnect(flags) {
+    // CONSENT GATE — disconnecting permanently cuts someone off; confirm first.
+    if (!isConfirmed(flags)) {
+        const connectionId = requireString(flags, 'connection-id', 'disconnect');
+        const who = await connectionWho(connectionId);
+        needsConfirmation('disconnect', { connection_id: connectionId, who, will: `Permanently disconnect ${who}. They can no longer message this agent and the conversation closes. They would need a fresh invite/QR to reconnect.` }, `Disconnect ${who}? They won't be able to message you anymore.`, `disconnect --connection-id ${connectionId} --confirmed`);
+    }
     return actOnConnectionCmd(flags, 'disconnect', 'connection-id', 'disconnect', 'disconnected');
 }
 async function cmdRotateToken(flags) {
+    // CONSENT GATE — rotating the key forces the friend's app to re-authenticate.
+    // It's jargon, so the preview explains it in plain terms: a security reset, NOT a
+    // disconnect (they stay connected).
+    if (!isConfirmed(flags)) {
+        const connectionId = requireString(flags, 'connection-id', 'rotate-token');
+        const who = await connectionWho(connectionId);
+        needsConfirmation('rotate-token', { connection_id: connectionId, who, will: `Refresh the security key for ${who}'s connection. They STAY connected — their app just re-authenticates automatically on its next message. A security refresh, not a disconnect.` }, `Refresh the connection key for ${who}? (a security reset — they stay connected)`, `rotate-token --connection-id ${connectionId} --confirmed`);
+    }
     return actOnConnectionCmd(flags, 'rotate-token', 'connection-id', 'rotate-token', 'token_rotated');
 }
 // ── Directive + per-friend memory (docs/profile-memory-design.md) ─────
@@ -540,7 +588,7 @@ async function cmdSetDirective(flags) {
     await api.setDirective(auth.accessToken, agentId, content, ownerMsgSeq !== undefined ? Number(ownerMsgSeq) : undefined);
     ok({
         status: 'ok', agent_id: agentId, updated: true,
-        next_step: 'Private directive saved — tell the owner (in their language) their rules are saved. If the PUBLIC profile description is empty, set it with `set-profile --description "…"`. When both reflect the owner, run `share-self`.',
+        next_step: 'Private directive saved — tell the owner (in their language) their rules are saved. Design order is NAME → profile → rules → share: if the name isn\'t confirmed yet, do `set-profile --name "…"`; if the PUBLIC profile description is empty, set it with `set-profile --description "…"`. When all reflect the owner, run `share-self`.',
     });
 }
 // Show the agent's own profile (public card) + directive + setup state.
@@ -570,11 +618,19 @@ async function cmdSetProfile(flags) {
     const ownerMsgSeq = optionalString(flags, 'owner-msg-seq'); // H2: brain edits cite the owner-channel msg
     const { auth, agentId } = await requireBoundAgent();
     await api.setAgentProfile(auth.accessToken, agentId, { description, name, owner_msg_seq: ownerMsgSeq !== undefined ? Number(ownerMsgSeq) : undefined });
+    // Setting the NAME confirms it — record that locally so the setup checklist's name
+    // step reads as done (the server has no name-confirmed flag for a new auto-named agent).
+    if (name !== undefined)
+        await markNameConfirmed();
     ok({
         status: 'profile_updated',
         agent_id: agentId,
         updated: { description: description !== undefined, name: name !== undefined },
-        next_step: 'Public profile updated — tell the owner (in their language) their profile is saved. If the private DIRECTIVE is not set yet, do `set-directive --content "…"`. Once both reflect the owner, run `share-self` to share.',
+        // Design order is NAME → PUBLIC profile → PRIVATE directive → share. Point at the
+        // next unfinished step so set-profile keeps the same flow as login/setup/guide.
+        next_step: (name !== undefined && description === undefined)
+            ? 'Name confirmed — tell the owner (in their language) their agent\'s name is set. Next, the PUBLIC profile: `set-profile --description "…"` (who they are / what they discuss). Then the PRIVATE directive `set-directive --content "…"`, and finally `share-self`.'
+            : 'Public profile updated — tell the owner (in their language) their profile is saved. Design order is NAME → profile → rules → share: if the name isn\'t confirmed yet, do `set-profile --name "…"`; if the private DIRECTIVE isn\'t set, do `set-directive --content "…"`. Once all reflect the owner, run `share-self`.',
     });
 }
 // ── Reach out + unified conversations (merged from ovoclaw-connect) ──────
@@ -661,7 +717,11 @@ async function cmdInspectInvite(flags) {
 }
 async function cmdConnect(flags) {
     const invite = requireString(flags, 'invite', 'connect');
-    const introduction = requireString(flags, 'intro', 'connect');
+    // --intro is OPTIONAL. The owner just pastes a link/QR; the share page never tells
+    // them to write an intro, so requiring one dead-ended first contact. Default to a
+    // neutral opener (the agent can still pass --intro to personalize). The peer's brain
+    // answers this first line, so a plain greeting works fine.
+    const introduction = optionalString(flags, 'intro') ?? "Hi! I'd like to connect.";
     const { slug, host } = parseInvite(invite);
     const auth = await loadAuth();
     const loggedIn = !!(auth && auth.agentId);
@@ -922,7 +982,7 @@ async function main() {
         case 'logout': return cmdLogout();
         case 'share-self': return cmdShareSelf(flags);
         case 'list-shares': return cmdListShares();
-        case 'revoke-share': return cmdRevokeShare();
+        case 'revoke-share': return cmdRevokeShare(flags);
         case 'set-approval': return cmdSetApproval(flags);
         case 'regenerate-share': return cmdRegenerateShare(flags);
         case 'list-connections': return cmdListConnections(flags);

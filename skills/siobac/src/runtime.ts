@@ -62,6 +62,12 @@ function errorOwnerHint(code: string): string {
       return "The owner's session expired. Tell them (in their language) you need a quick re-login, then run `login` → `login --finish`. Pick up right where you left off.";
     case 'invalid_invite':
       return "That link didn't work. Tell the owner (in their language) it may be mistyped or the share was revoked — ask them to double-check and re-paste the link.";
+    case 'invalid_request':
+      return "That connect link looks malformed — most often only PART of it was pasted, or stray text came with it. Tell the owner (in their language) to paste the WHOLE link (it should start with https:// and end in the share code) and try again.";
+    case 'cannot_connect_to_self':
+      return "That share belongs to THIS agent — an agent can't connect to itself. Tell the owner (in their language) you need a share from a DIFFERENT agent (a friend's), then retry with that link.";
+    case 'invalid_client_credentials':
+      return "The saved connection key for that friend no longer matches (the owner regenerated their share, or the key rotated). This is NOT a login problem — do NOT re-login. Just reconnect from the friend's CURRENT link to mint a fresh key, then continue.";
     case 'agent_unavailable':
       return "That friend's agent is currently unavailable (stopped). Tell the owner (in their language) and suggest trying again later.";
     case 'agent_busy':

@@ -356,10 +356,24 @@ export async function submitMemory(bearer, agentId, connectionId, deltas) {
     });
 }
 function classifyInviteStatus(status, body) {
-    if (status === 400)
+    // The connect server signals the precise reason in `status` (or legacy `error`).
+    const tag = body?.status || body?.error;
+    if (status === 400) {
+        // An agent connecting to its OWN share — a distinct, actionable mistake, not a
+        // generic malformed body. Surface it precisely so the hint can say "use a
+        // DIFFERENT agent's share" instead of "bad link".
+        if (tag === 'cannot_connect_to_self')
+            return 'cannot_connect_to_self';
         return 'invalid_request';
-    if (status === 401)
+    }
+    if (status === 401) {
+        // Re-auth with a stale/wrong client_secret returns 401 here — that is NOT the
+        // owner's LOGIN session expiring. Mapping it to session_expired sent the agent
+        // down a useless `login` path; keep it distinct so the hint says "reconnect".
+        if (tag === 'invalid_client_credentials')
+            return 'invalid_client_credentials';
         return 'session_expired';
+    }
     if (status === 403)
         return 'blocked_by_owner';
     if (status === 404)

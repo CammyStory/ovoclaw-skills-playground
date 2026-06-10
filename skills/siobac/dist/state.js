@@ -228,6 +228,14 @@ export async function clearAuth() {
         }
     }
 }
+// Mark the bound agent's NAME as confirmed (idempotent; no-op if no binding yet).
+// Called when the owner sets the name via `set-profile --name`.
+export async function markNameConfirmed() {
+    const bound = await loadBoundAgent();
+    if (!bound || bound.nameConfirmedAt)
+        return;
+    await saveBoundAgent({ ...bound, nameConfirmedAt: new Date().toISOString() });
+}
 export async function loadBoundAgent() {
     try {
         const raw = await fs.readFile(agentFile(), 'utf8');

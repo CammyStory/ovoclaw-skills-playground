@@ -24,6 +24,8 @@ export type ApiErrorCode =
   | 'cli_error'            // local CLI input error
   // ── Reach-out (active connect) codes, from the merged connect transport ──
   | 'invalid_invite'       // 404: unknown slug / invite_not_found
+  | 'cannot_connect_to_self' // 400: an agent tried to connect to its OWN share
+  | 'invalid_client_credentials' // 401 (connect re-auth): stored client_secret is wrong, NOT a login-session issue
   | 'agent_unavailable'    // 409: the shared agent is stopped/unavailable
   | 'agent_busy'           // 409: agent_busy / queue_full (single-user mode)
   | 'blocked_by_owner'     // 403: post-rejection cooldown on the connect side
@@ -717,9 +719,23 @@ export interface PollRepliesResponse {
   your_user_id?: string; delivery?: unknown
 }
 
-function classifyInviteStatus(status: number, body: { error?: string } | undefined): ApiErrorCode {
-  if (status === 400) return 'invalid_request'
-  if (status === 401) return 'session_expired'
+function classifyInviteStatus(status: number, body: { error?: string; status?: string } | undefined): ApiErrorCode {
+  // The connect server signals the precise reason in `status` (or legacy `error`).
+  const tag = body?.status || body?.error
+  if (status === 400) {
+    // An agent connecting to its OWN share — a distinct, actionable mistake, not a
+    // generic malformed body. Surface it precisely so the hint can say "use a
+    // DIFFERENT agent's share" instead of "bad link".
+    if (tag === 'cannot_connect_to_self') return 'cannot_connect_to_self'
+    return 'invalid_request'
+  }
+  if (status === 401) {
+    // Re-auth with a stale/wrong client_secret returns 401 here — that is NOT the
+    // owner's LOGIN session expiring. Mapping it to session_expired sent the agent
+    // down a useless `login` path; keep it distinct so the hint says "reconnect".
+    if (tag === 'invalid_client_credentials') return 'invalid_client_credentials'
+    return 'session_expired'
+  }
   if (status === 403) return 'blocked_by_owner'
   if (status === 404) return 'invalid_invite'
   if (status === 409) return body?.error === 'agent_busy' || body?.error === 'queue_full' ? 'agent_busy' : 'agent_unavailable'

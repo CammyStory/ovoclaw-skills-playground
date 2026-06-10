@@ -213,7 +213,7 @@ async function cmdLoginFinish(_flags: Record<string, string | true>) {
     auto_go_online: true,
     next_step: prof
       ? (prof.is_new
-          ? 'YOU ARE ONLINE BY DEFAULT — once this agent is shared, the SERVER answers friends automatically the moment they message, and ESCALATES anything that commits the owner (meeting/money/scheduling/sensitive/off-directive/impersonation) for approval. Nothing to arm — server-driven (see references/brain.md). Relay the ONLINE hub. This agent is NEW (no profile/directive), so nudge the owner to design it — (a) PUBLIC `set-profile --description "…"`, (b) PRIVATE `set-directive --content "…"` (the server replies in character using these) — and `share-self` for the QR/link. Pause auto-replies with `pause`; resume with `go-online`.'
+          ? 'YOU ARE ONLINE BY DEFAULT — once this agent is shared, the SERVER answers friends automatically the moment they message, and ESCALATES anything that commits the owner (meeting/money/scheduling/sensitive/off-directive/impersonation) for approval. Nothing to arm — server-driven (see references/brain.md). Relay the ONLINE hub. This agent is NEW, so guide the owner through design in THREE steps (scripts → Step 1): (1) NAME — confirm or change the auto-name via `set-profile --name "…"`; (2) PUBLIC profile `set-profile --description "…"`; (3) PRIVATE directive `set-directive --content "…"`. When you show an example, ADAPT it to the owner — never save the sample verbatim. Then `share-self` for the QR/link. Pause auto-replies with `pause`; resume with `go-online`.'
           : 'YOU ARE ONLINE BY DEFAULT — the SERVER answers friends automatically and ESCALATES anything that commits the owner (meeting/money/scheduling/sensitive/off-directive/impersonation) for approval. Nothing to arm — server-driven (see references/brain.md). Relay the ONLINE hub showing the current `profile`/`directive`. The owner can update profile/rules (`set-profile`/`set-directive`), `share-self`, `pause` (manual), or `go-online` (resume). Escalations surface in the inbox (`owner-channel` / `brain-pending`) to approve or decline.')
       : 'You are online by default — the server auto-replies and escalates; nothing to arm. Relay the online hub.',
     remember: rememberLabel
@@ -628,7 +628,7 @@ async function cmdGetProfile(_flags: Record<string, string | true>) {
     profile_complete: p.profile_complete,
     directive_set: p.directive_set,
     next_step: p.is_new
-      ? "This agent is NEW (no public profile, no private directive). Tell the owner (in their language) it's online by default once shared, then help them DESIGN it: (1) public profile `set-profile --description \"…\"` (what others see), (2) private directive `set-directive --content \"…\"` (how you act on their behalf). Then `share-self` for the QR/link."
+      ? "This agent is NEW. Tell the owner (in their language) it's online by default once shared, then DESIGN it in THREE steps (scripts → Step 1): (1) NAME — confirm or change the auto-name via `set-profile --name \"…\"`; (2) public profile `set-profile --description \"…\"`; (3) private directive `set-directive --content \"…\"`. If you show an example, ADAPT it to the owner — never save the sample as-is. Then `share-self` for the QR/link."
       : "Show the owner (in their language) their current profile + directive and ask if they want to change either (`set-profile` / `set-directive`) — never overwrite silently. The server already auto-replies in character from these; they can `share-self`, `pause`, or `go-online`.",
   })
 }

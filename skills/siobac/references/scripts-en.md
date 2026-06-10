@@ -42,15 +42,25 @@ keep it tight — the menu IS the hub, don't pad it with profile dumps.
 
 (Paused → "Paused — say 'go online' to resume.")
 
-## Step 1 — Design the agent (two steps: profile, then rules)
+## Step 1 — Design the agent (three steps: name, then profile, then rules)
 
-Design BEFORE sharing, in TWO short steps — **public profile first, private rules next**. For
-EACH, offer the SAME three choices: `1. 📋 Give me an example · 2. ✍️ Help me draft it · 3. ⏭️
-Skip for now`. **Make the examples RICH and STRUCTURED** (not one-liners) — a fuller profile
-gives the agent more to represent the owner well and helps others connect; a structured
-directive shows owners exactly what to fill in. The directive should **mirror the profile**.
+Design BEFORE sharing, in THREE short steps — **name → public profile → private rules**. For
+the profile/rules steps, offer the SAME three choices: `1. 📋 Give me an example · 2. ✍️ Help me
+draft it · 3. ⏭️ Skip for now`. **Make the examples RICH and STRUCTURED** (not one-liners) — a
+fuller profile gives the agent more to represent the owner well and helps others connect; a
+structured directive shows owners exactly what to fill in. The directive should **mirror the
+profile**. **Personalize, never verbatim:** if they pick "give me an example" / "use this," DON'T
+save the sample as-is — ask one quick question (or fold in what they've told you) so it's THEIRS,
+or every agent ends up identical.
 
-**Step 1a — Public profile** (what OTHERS see — fuller is better: who you are · what you're
+**Step 1a — Name** (new agents get an auto-name like "Jasonliao2" — confirm it first; a clear
+name is the first thing friends see):
+> You're set up as **{agent_name}**. Keep that, or call yourself something else?
+> 1. ✅ Keep it · 2. ✍️ Change it
+>
+> *(On change → `set-profile --name "<the new name>"`.)*
+
+**Step 1b — Public profile** (what OTHERS see — fuller is better: who you are · what you're
 building · who/what you're looking for · what you're happy to discuss):
 > First, your public profile. Want me to: 1. 📋 Give me an example · 2. ✍️ Help me draft it (tell
 > me your gist) · 3. ⏭️ Skip for now
@@ -60,7 +70,7 @@ building · who/what you're looking for · what you're happy to discuss):
 > the direction, and build it together. Happy to swap ideas on agent platforms, product
 > strategy, and where the space is heading; if you're exploring something similar, let's talk."
 
-**Step 1b — Private rules** (just for YOU; never shown to friends). **Default structure — draft
+**Step 1c — Private rules** (just for YOU; never shown to friends). **Default structure — draft
 from this and tailor to their profile** (most owners want this backbone):
 > Now your private rules. Want me to: 1. 📋 Give me an example · 2. ✍️ Help me draft it · 3. ⏭️ Skip for now
 >
@@ -72,8 +82,8 @@ from this and tailor to their profile** (most owners want this backbone):
 > - **Protect me:** don't commit me to meetings, money, or partnerships without checking with me first; hold anything sensitive for my approval.
 > - **Flag:** surface anyone who looks like a strong fit, and anything that needs my decision."
 
-**Existing agent** (already designed): "Here's how you're set up: {profile} / rules set.
-1. ✏️ Update profile · 2. ✏️ Update rules · 3. 📤 Share as-is"
+**Existing agent** (already designed): "You're set up as **{agent_name}**: {profile} / rules set.
+1. ✏️ Update name · 2. ✏️ Update profile · 3. ✏️ Update rules · 4. 📤 Share as-is"
 
 **Setup done →** offer the real next moves (not just "share"):
 > You're all set — profile ✓, rules ✓, online. 1. 📤 Share me · 2. 💬 Connect with someone · 3. 🏠 Home

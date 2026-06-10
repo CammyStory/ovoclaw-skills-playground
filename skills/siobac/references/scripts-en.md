@@ -142,7 +142,14 @@ Offer real actions: draft an invite, see who's connected, reach out, go home.)*
 
 ## Step 7 — Manage
 
-> You're connected to **{N}** friends. 1. ⏸️ Pause me · 2. 🔌 Disconnect someone · 3. 🚫 Stop sharing
+(Lead with the SAFE, common actions; keep the destructive ones last. If there are pending requests, surface that first.)
+
+> You're connected to **{N}** friends. 1. 👥 See who's connected · 2. ✅ Review requests · 3. ⏸️ Pause me · 4. 🔌 Disconnect someone · 5. 🚫 Stop sharing
+
+**Refresh a connection's key** (rare; if a friend's app keeps failing to reach you) — plain words, never the word "token":
+> I can reset the secure key for your connection with **{friend}** — they stay connected, their app just signs in again automatically. 1. 🔑 Refresh it · 2. Leave it
+
+(Destructive actions — disconnect, stop sharing, refresh-key — each confirm first with a one-line preview before they run.)
 
 ---
 

@@ -143,12 +143,15 @@ script to speak from. Never paste JSON or show ids/handles to the owner.
 
 ## Step 7 — Manage connections & log out
 
-- **When:** "who's connected?", "disconnect Alex", "pause/resume", "stop sharing", "log out".
+- **When:** "who's connected?", "approve a request", "pause/resume", "disconnect Alex", "stop sharing", "log out".
 - **What it does:** manage connections and end sessions.
-- **Commands:** `list-connections`; `pause-connection`/`resume-connection`/`disconnect`/
-  `rotate-token` (each `--connection-id <c>`); `list-sessions` / `forget-session`;
-  `revoke-share`; `logout`.
-- **Do:** show the connections; **confirm destructive actions** (disconnect, revoke,
-  logout) first.
+- **Commands (safe/common first):** `list-connections` (see who's connected);
+  `requests` → `approve`/`reject`; `resume-connection`/`pause-connection`
+  (each `--connection-id <c>`); `list-sessions` / `forget-session`. **Destructive,
+  last:** `rotate-token`, `disconnect` (each `--connection-id <c>`),
+  `revoke-share`, `regenerate-share`, `logout`.
+- **Do:** show the connections FIRST; lead with the safe actions. Every destructive
+  command is consent-gated — its first call returns a preview to show the owner;
+  re-run with `--confirmed` only on a clear yes.
 - **Owner wording →** `scripts` (Step 7).
 - **Next →** wherever the owner goes.

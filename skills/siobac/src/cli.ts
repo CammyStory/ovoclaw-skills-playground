@@ -7,6 +7,7 @@ import {
   parseArgs,
   requireString,
   optionalString,
+  optionalNonNegInt,
   CliError,
 } from './argparse.js'
 import * as api from './api.js'
@@ -796,10 +797,25 @@ function sanitizeConnect(res: api.ConnectResponse): Record<string, unknown> {
   return safe as Record<string, unknown>
 }
 
+// A fetch against the INVITE's own host (connect / inspect-invite). If the host
+// itself doesn't answer, that's a bad/incomplete LINK, not a Siobac outage — remap
+// network_error so the owner gets "check the link", not "run doctor" (which probes a
+// different, healthy server). Established-session fetches (send/poll) keep network_error.
+async function inviteHostCall<T>(fn: () => Promise<T>): Promise<T> {
+  try {
+    return await fn()
+  } catch (e) {
+    if ((e as api.ApiError).code === 'network_error') {
+      throw api.makeApiError('invite_unreachable', `invite_unreachable: ${(e as Error).message}`)
+    }
+    throw e
+  }
+}
+
 async function cmdInspectInvite(flags: Record<string, string | true>) {
   const invite = requireString(flags, 'invite', 'inspect-invite')
   const { slug, host } = parseInvite(invite)
-  const m = await api.getManifest(host, slug)
+  const m = await inviteHostCall(() => api.getManifest(host, slug))
   const auth = await loadAuth()
   ok({
     status: 'ok', host, slug, agent: m.agent,
@@ -830,12 +846,12 @@ async function cmdConnect(flags: Record<string, string | true>) {
     })
   }
 
-  const res = await api.connectToInvite(host, slug, {
+  const res = await inviteHostCall(() => api.connectToInvite(host, slug, {
     your_agent_name: optionalString(flags, 'agent-name'),
     your_owner_name: optionalString(flags, 'owner-name'),
     introduction,
     purpose_hint: optionalString(flags, 'purpose'),
-  }, auth!.accessToken)
+  }, auth!.accessToken))
 
   if (res.status === 'active' || res.status === 'reauthorized' || res.status === 'already_connected') {
     // Surface the friend's NAME so the owner can be told WHO they connected to. The
@@ -891,11 +907,11 @@ async function cmdRead(flags: Record<string, string | true>) {
   if (isActiveHandle(handle)) {
     const sess = await getSession(handle)
     if (!sess) throw new CliError(`Unknown conversation "${handle}". Run \`conversations\` to list, or \`connect\` first.`)
-    const sinceFlag = optionalString(flags, 'since')
+    const sinceFlag = optionalNonNegInt(flags, 'since')
     if (sinceFlag !== undefined) {
       // Explicit forward page from <since> (the server's /poll returns one capped
       // window of messages with seq > since, oldest-first).
-      const res = await withSessionReauth(sess, (tok) => api.pollConnectionReplies(sess.host, tok, Math.max(0, Number(sinceFlag) || 0), 0, /* full */ true))
+      const res = await withSessionReauth(sess, (tok) => api.pollConnectionReplies(sess.host, tok, sinceFlag, 0, /* full */ true))
       const earliest = res.messages[0]?.seq
       ok({
         status: 'ok', conversation: handle, direction: 'outbound', peer: sess.peerAgentName ?? null,
@@ -927,8 +943,8 @@ async function cmdRead(flags: Record<string, string | true>) {
     })
   }
   const { auth, agentId } = await requireBoundAgent()
-  const since = optionalString(flags, 'since')
-  const hist = await api.readConversation(auth.accessToken, agentId, handle, { since: since !== undefined ? Math.max(0, Number(since) || 0) : undefined })
+  const since = optionalNonNegInt(flags, 'since')
+  const hist = await api.readConversation(auth.accessToken, agentId, handle, { since })
   ok({
     status: 'ok', conversation: handle, direction: 'inbound', conversation_id: hist.conversation_id, message_count: hist.messages.length, last_seq: hist.last_seq, has_more: hist.has_more, messages: hist.messages,
     next_step: 'Messages in this inbound conversation. Summarize for the owner in their language — never echo raw messages or ids. The server usually auto-replies when online; only `send --conversation ' + handle + ' --message "<text>"` if the owner wants to reply manually (it confirms first).',

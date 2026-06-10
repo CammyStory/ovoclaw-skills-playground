@@ -61,7 +61,11 @@ function errorOwnerHint(code: string): string {
     case 'not_authenticated':
       return "The owner's session expired. Tell them (in their language) you need a quick re-login, then run `login` → `login --finish`. Pick up right where you left off.";
     case 'invalid_invite':
-      return "That link didn't work. Tell the owner (in their language) it may be mistyped or the share was revoked — ask them to double-check and re-paste the link.";
+      return "That link doesn't match any share — most likely a typo or only part of it was pasted. Tell the owner (in their language) to double-check and re-paste the WHOLE link.";
+    case 'invite_revoked':
+      return "That share link was turned OFF by its owner — it's not a typo. Tell the owner (in their language) and ask them to get a fresh link/QR from that person.";
+    case 'invite_unreachable':
+      return "Couldn't reach that link's address. Tell the owner (in their language) it's most likely incomplete or mistyped — ask them to paste the WHOLE link (it should start with https:// and end in the share code). If they're sure it's right, that person's server may be momentarily down — try again shortly. (Do NOT run `doctor` — that checks YOUR connection, which is fine.)";
     case 'invalid_request':
       return "That connect link looks malformed — most often only PART of it was pasted, or stray text came with it. Tell the owner (in their language) to paste the WHOLE link (it should start with https:// and end in the share code) and try again.";
     case 'cannot_connect_to_self':

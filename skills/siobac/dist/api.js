@@ -376,8 +376,14 @@ function classifyInviteStatus(status, body) {
     }
     if (status === 403)
         return 'blocked_by_owner';
-    if (status === 404)
+    if (status === 404) {
+        // A slug that EXISTED but was revoked by its owner is distinct from one that
+        // never existed (a typo) — different owner advice (ask for a fresh link vs check
+        // the spelling). The server tags the revoked case in the body.
+        if (tag === 'invite_revoked')
+            return 'invite_revoked';
         return 'invalid_invite';
+    }
     if (status === 409)
         return body?.error === 'agent_busy' || body?.error === 'queue_full' ? 'agent_busy' : 'agent_unavailable';
     if (status === 429)

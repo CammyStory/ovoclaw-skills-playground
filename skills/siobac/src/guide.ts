@@ -45,6 +45,12 @@ export const GUIDE_STEPS = [
     do: 'Inspect the invite, then connect. The owner usually just pastes a link/QR — `--intro` is OPTIONAL (a neutral opener is sent if omitted); add one to personalize first contact. Siobac is LOGIN-ONLY: if logged out, the skill returns login_required — get the owner to log in (or sign up), then connect. Then talk with send/read/check.',
     commands: ['inspect-invite --invite <qr/link>', 'connect --invite <qr/link> [--intro "…"] [--purpose "<goal>"]', 'check-approval', 'send --conversation <id> --message "…" --confirmed', 'read --conversation <id>'],
   },
+  {
+    step: 'manage',
+    when: '"who\'s connected?", "pause/resume Alex", "approve a request", "disconnect", "stop sharing", "log out"',
+    do: "Lead with the SAFE, common actions — see who's connected, approve pending requests, pause/resume — and put DESTRUCTIVE ones (disconnect, revoke-share, regenerate-share, logout) LAST. Every destructive command is consent-gated: its first call returns needs_confirmation with a plain-language preview to show the owner; only re-run with --confirmed on a clear yes.",
+    commands: ['list-connections', 'requests', 'approve --request-id <id> --confirmed', 'resume-connection --connection-id <id>', 'pause-connection --connection-id <id>', 'rotate-token --connection-id <id> --confirmed', 'disconnect --connection-id <id> --confirmed', 'revoke-share --confirmed', 'logout'],
+  },
 ] as const
 
 export async function cmdGuide(flags: Record<string, string | true>) {

@@ -23,7 +23,9 @@ export type ApiErrorCode =
   | 'not_implemented_yet'  // CLI: command stubbed pending real implementation
   | 'cli_error'            // local CLI input error
   // ── Reach-out (active connect) codes, from the merged connect transport ──
-  | 'invalid_invite'       // 404: unknown slug / invite_not_found
+  | 'invalid_invite'       // 404: unknown slug / invite_not_found (typo / never existed)
+  | 'invite_revoked'       // 404 (body invite_revoked): the slug EXISTED but the owner turned it off
+  | 'invite_unreachable'   // connect/inspect: the invite's OWN host didn't respond (likely a bad/incomplete link)
   | 'cannot_connect_to_self' // 400: an agent tried to connect to its OWN share
   | 'invalid_client_credentials' // 401 (connect re-auth): stored client_secret is wrong, NOT a login-session issue
   | 'agent_unavailable'    // 409: the shared agent is stopped/unavailable
@@ -737,7 +739,13 @@ function classifyInviteStatus(status: number, body: { error?: string; status?: s
     return 'session_expired'
   }
   if (status === 403) return 'blocked_by_owner'
-  if (status === 404) return 'invalid_invite'
+  if (status === 404) {
+    // A slug that EXISTED but was revoked by its owner is distinct from one that
+    // never existed (a typo) — different owner advice (ask for a fresh link vs check
+    // the spelling). The server tags the revoked case in the body.
+    if (tag === 'invite_revoked') return 'invite_revoked'
+    return 'invalid_invite'
+  }
   if (status === 409) return body?.error === 'agent_busy' || body?.error === 'queue_full' ? 'agent_busy' : 'agent_unavailable'
   if (status === 429) return body?.error === 'auth_blocked' ? 'auth_blocked' : 'rate_limited'
   if (status >= 500) return 'server_error'

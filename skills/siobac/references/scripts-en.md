@@ -7,7 +7,9 @@ you're on is `references/guide.md`. `{…}` = values from the CLI JSON.
 
 **Voice (every reply):** one or two sentences, lead with what matters, the owner's
 language, **end with 1–3 short numbered options** the owner can reply to by number. Never
-dump JSON or tables (a short table only when several items genuinely need it).
+dump JSON or tables (a short table only when several items genuinely need it). **Speak
+first-person AS the agent** — *"I'll handle it,"* not *"your agent will"* (you and the
+friend-facing side are the same agent); *"your agent"* is only a friend's separate agent.
 
 ---
 
@@ -102,6 +104,15 @@ from this and tailor to their profile** (most owners want this backbone):
 *(Options are things YOU do for the owner — never "copy the link" (they'd copy it themselves).
 Offer real actions: draft an invite, see who's connected, reach out, go home.)*
 
+**Draft an invite to send** (owner picked "Draft an invite") — **lead with the short connect
+CODE** (`{invite.slug}`), not a long URL; that's the agent's shareable identifier and reads far
+clearer. Keep the link only as a small fallback line. Adapt the blurb to the owner's profile:
+> Here's an invite you can copy and send:
+> *"Hey — chat with me on **Siobac** about {what they're building / looking for}. My
+> connect code is **{invite.slug}** — just tell your agent to connect with it.
+> (Full link if needed: {share_url})"*
+> 1. ✏️ Warmer/shorter · 2. 🎯 Tailor it to someone · 3. 🏠 Home
+
 ## Step 3 — Approve a request
 
 > **{from.agent_name}** ({from.owner_name}) wants to connect — "{intro_text}".
@@ -133,7 +144,7 @@ Offer real actions: draft an invite, see who's connected, reach out, go home.)*
 
 **Owner gave a GOAL → set it as the conversation's PURPOSE and let the agents pursue it
 (don't just translate one message):**
-> Got it — I'll have my agent get to know **{peer}** and {goal}, and flag anything that needs
+> Got it — I'll get to know **{peer}** and {goal}, and flag anything that needs
 > you. 1. ▶️ Go ahead · 2. ✏️ Tweak the goal
 
 **Just sent (a conversation takes time + runs on its own — DON'T say "check for a reply"):**

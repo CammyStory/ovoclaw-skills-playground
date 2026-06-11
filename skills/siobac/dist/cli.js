@@ -573,8 +573,17 @@ async function cmdRemember(flags) {
     if (summary !== undefined) {
         deltas.push({ op: 'update', scope: 'friend', friend_id: connectionId, kind: 'summary', content: summary });
     }
+    // Convenience: --authorize records a STANDING owner pre-approval (e.g. an availability
+    // window) the SERVER brain may act on directly — so it confirms a request INSIDE that
+    // scope without re-escalating to the owner. Use it when the owner grants a windowed OK
+    // ("any afternoon this week — feel free to book"); include the concrete window + time
+    // zone so the brain can tell inside-vs-outside.
+    const authorize = optionalString(flags, 'authorize');
+    if (authorize !== undefined) {
+        deltas.push({ op: 'add', scope: 'friend', friend_id: connectionId, kind: 'authorization', content: authorize, disclosure: 'private' });
+    }
     if (deltas.length === 0)
-        throw new CliError('nothing to remember — pass --deltas <json> and/or --summary "<text>".');
+        throw new CliError('nothing to remember — pass --deltas <json>, --summary "<text>", and/or --authorize "<owner pre-approval, e.g. \'available Fri afternoon UTC+8; may confirm any slot\'>".');
     const result = await api.submitMemory(auth.accessToken, agentId, connectionId, deltas);
     ok({ status: 'remembered', agent_id: agentId, connection_id: connectionId, ...result });
 }

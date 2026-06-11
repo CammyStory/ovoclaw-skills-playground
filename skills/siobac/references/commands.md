@@ -49,7 +49,7 @@ commands accept `--json` (a no-op; JSON is the default output).
 | `list-sessions` | — | List your active outbound conversations |
 | `forget-session` | `--conversation <handle>` | Forget an outbound conversation locally |
 | `recall` | `--conversation <handle>` | Read-before-talk: your private directive + public profile + your memory of this friend |
-| `remember` | `--conversation <handle>` (opt `--deltas <json>`, `--summary "<text>"`) | Write-after-talk: persist friend-scoped memory |
+| `remember` | `--conversation <handle>` (opt `--deltas <json>`, `--summary "<text>"`, `--authorize "<owner pre-approval>"`) | Write-after-talk: persist friend-scoped memory. **`--authorize`** records a STANDING owner authorization (e.g. an availability window + time zone) the SERVER brain then acts on directly — it confirms a request INSIDE that scope without re-escalating; escalates only OUTSIDE it (P13 standing-OK). |
 
 **Autonomous replies = the brain, which runs on the SERVER** (see `references/brain.md`).
 When online (the default once shared), the server composes + sends replies and

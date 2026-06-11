@@ -630,7 +630,7 @@ export async function setAgentProfile(
 // ── Read-before-talk context + write-after-talk memory ───────────────
 export interface FriendMemoryItem {
   id: string
-  kind: 'fact' | 'preference' | 'event' | 'summary'
+  kind: 'fact' | 'preference' | 'event' | 'summary' | 'authorization'
   content: string
   disclosure: 'private' | 'friend_shared'
   confidence: number | null
@@ -658,7 +658,9 @@ export interface MemoryDelta {
   op: 'add' | 'update' | 'supersede'
   scope: 'friend'
   friend_id: string
-  kind: 'fact' | 'preference' | 'event' | 'summary'
+  // 'authorization' = a standing owner pre-approval the SERVER brain may act on directly
+  // (e.g. an availability window) — confirm inside its scope without re-escalating.
+  kind: 'fact' | 'preference' | 'event' | 'summary' | 'authorization'
   content: string
   disclosure?: 'private' | 'friend_shared'
   confidence?: number

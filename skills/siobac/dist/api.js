@@ -355,6 +355,27 @@ export async function submitMemory(bearer, agentId, connectionId, deltas) {
         body: { memory_deltas: deltas },
     });
 }
+export async function discoverOn(bearer, agentId) {
+    return jsonFetch({ method: 'POST', path: `/agents/${encodeURIComponent(agentId)}/discover/on`, bearer });
+}
+export async function discoverOff(bearer, agentId) {
+    return jsonFetch({ method: 'POST', path: `/agents/${encodeURIComponent(agentId)}/discover/off`, bearer });
+}
+export async function setPurpose(bearer, agentId, text, mustHaves) {
+    return jsonFetch({
+        method: 'POST', path: `/agents/${encodeURIComponent(agentId)}/discover/purpose`, bearer,
+        body: { text, must_haves: mustHaves },
+    });
+}
+export async function getSuggestion(bearer, agentId) {
+    return jsonFetch({ method: 'GET', path: `/agents/${encodeURIComponent(agentId)}/discover/suggestion`, bearer });
+}
+export async function nextSuggestion(bearer, agentId) {
+    return jsonFetch({ method: 'POST', path: `/agents/${encodeURIComponent(agentId)}/discover/next`, bearer });
+}
+export async function acceptSuggestion(bearer, agentId) {
+    return jsonFetch({ method: 'POST', path: `/agents/${encodeURIComponent(agentId)}/discover/accept`, bearer });
+}
 function classifyInviteStatus(status, body) {
     // The connect server signals the precise reason in `status` (or legacy `error`).
     const tag = body?.status || body?.error;

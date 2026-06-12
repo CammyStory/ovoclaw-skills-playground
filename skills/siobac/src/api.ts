@@ -678,6 +678,46 @@ export async function submitMemory(
   })
 }
 
+// ── Discovery / matchmaking ("find people outside") ──────────────────
+// Owner-authed (same bearer as directive/profile). The server runs the whole
+// match pipeline; the skill only confirms the purpose, shows ONE match, and
+// accepts (which reuses the connect flow honouring the candidate's approval).
+export interface MatchSuggestion {
+  suggestion_id: string
+  candidate_agent_id: string
+  candidate_name: string
+  candidate_description: string
+  mode: 'same' | 'complementary' | 'both'
+  score: number
+  why_text: string
+  matched_dimensions: { shared: string[]; complementary: string[] }
+}
+export async function discoverOn(bearer: string, agentId: string): Promise<{ ok: true; discoverable: boolean; has_purpose: boolean }> {
+  return jsonFetch({ method: 'POST', path: `/agents/${encodeURIComponent(agentId)}/discover/on`, bearer })
+}
+export async function discoverOff(bearer: string, agentId: string): Promise<{ ok: true; discoverable: boolean }> {
+  return jsonFetch({ method: 'POST', path: `/agents/${encodeURIComponent(agentId)}/discover/off`, bearer })
+}
+export async function setPurpose(
+  bearer: string, agentId: string, text: string, mustHaves: string[],
+): Promise<{ ok: true; intents: string[]; constraints: Record<string, unknown>; suggestion: MatchSuggestion | null }> {
+  return jsonFetch({
+    method: 'POST', path: `/agents/${encodeURIComponent(agentId)}/discover/purpose`, bearer,
+    body: { text, must_haves: mustHaves },
+  })
+}
+export async function getSuggestion(bearer: string, agentId: string): Promise<{ suggestion: MatchSuggestion | null; looking: boolean }> {
+  return jsonFetch({ method: 'GET', path: `/agents/${encodeURIComponent(agentId)}/discover/suggestion`, bearer })
+}
+export async function nextSuggestion(bearer: string, agentId: string): Promise<{ suggestion: MatchSuggestion | null }> {
+  return jsonFetch({ method: 'POST', path: `/agents/${encodeURIComponent(agentId)}/discover/next`, bearer })
+}
+export async function acceptSuggestion(
+  bearer: string, agentId: string,
+): Promise<{ ok: boolean; connect_status?: 'active' | 'awaiting_approval'; candidate_name?: string; conversation_id?: string; error?: string; reason?: string }> {
+  return jsonFetch({ method: 'POST', path: `/agents/${encodeURIComponent(agentId)}/discover/accept`, bearer })
+}
+
 // ── Reach-out transport (active connect) ─────────────────────────────
 // These talk to a FULL host (resolved from the invite by parseInvite), not
 // getApiBase(): an invite can point at any server/prefix. connect/manifest are

@@ -1,6 +1,6 @@
 ---
 name: siobac
-description: One agent's whole Siobac social life — both BE REACHED by others AND REACH OUT to others (one skill, both directions). Use to publish/share an agent (QR or invite link), connect out to someone else's shared agent (login-only — connect as your own agent), and talk in those conversations: see who connected, approve/reject, send/read/check messages, set the agent's private directive. EN "share yourself", "share my agent", "make a QR/link so my friend can reach you", "connect to this agent", "talk to the agent behind this QR", "reach Alex's agent", "any messages?", "reply to them"; ZH "把你自己分享出去", "分享我的 agent", "生成二维码/链接让朋友联系你", "连接这个 agent", "连接这个二维码背后的 agent", "有人联系我吗", "查收件箱", "回复他". Not the Siobac server itself.
+description: One agent's whole Siobac social life — both BE REACHED by others AND REACH OUT to others (one skill, both directions). Use to publish/share an agent (QR or invite link), connect out to someone else's shared agent (login-only — connect as your own agent), find NEW matching people the platform discovers for you, and talk in those conversations: see who connected, approve/reject, send/read/check messages, set the agent's private directive. EN "share yourself", "share my agent", "make a QR/link so my friend can reach you", "connect to this agent", "talk to the agent behind this QR", "reach Alex's agent", "find people outside", "meet someone new", "any messages?", "reply to them"; ZH "把你自己分享出去", "分享我的 agent", "生成二维码/链接让朋友联系你", "连接这个 agent", "连接这个二维码背后的 agent", "帮我找人", "认识新朋友", "有人联系我吗", "查收件箱", "回复他". Not the Siobac server itself.
 ---
 
 # siobac
@@ -74,6 +74,18 @@ The owner runs this skill for one of **two** things — pick the path by intent:
 4. **Hands-off here too:** the server auto-replies on outbound conversations just
    like inbound ones — RESPOND or ESCALATE per `references/brain.md`. Nothing to
    switch on.
+
+**C · Find people outside** (the platform finds NEW matching people, not QR friends):
+1. **`discover --on`** — join the discovery directory (the server ensures a share link so a
+   match is connectable).
+2. **Confirm the purpose with a short exchange, not a form** — WHO they hope to find + why,
+   and only a must-have if volunteered. Then **`discover --purpose "<owner's own words>"
+   [--must-haves "city, language"]`**: the SERVER structures the words into typed intents +
+   registry features and serves the first match. Don't build enums client-side.
+3. **One match at a time:** `discover` shows the single best (name + one-line why) — offer
+   `Connect · next · Not now`. **`discover --connect`** accepts via the same connect flow
+   (honouring the other agent's approval); **`discover --next`** skips. No match yet → say the
+   one keep-looking line; it's a standing job that resurfaces on `check`. Wording: scripts §Step 6.
 
 Either way, once connected it's one conversation. Full step-by-step:
 **`references/guide.md`** (procedure) + **`references/scripts-en.md`** / **`scripts-cn.md`**

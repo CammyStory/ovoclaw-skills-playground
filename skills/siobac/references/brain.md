@@ -80,21 +80,26 @@ Whenever the owner engages you (or asks "anything new?"):
      `brain-pending`, folded in — so you do **not** need a separate `brain-pending` call
      just to see what's pending (use `brain-pending`/`brain-resolve` only to act on one).
    - `inbound` threads / `outbound` new messages — new/unanswered chat to look at.
-   - `owner-channel` — the server's notes/questions to you (run separately; not in `check`).
+   - **`notices`** — the brain's narrative (🤝 new friend connected, ✅ conversation wrapped
+     up), **now folded into `check`** — no separate `owner-channel` read needed just to see
+     what happened.
 2. **MERGE — never show the same thing twice.** A `needs_you` item, a `check` thread marked
    **`held`**, and any `brain-pending` row with the same **`connId`** are the **same
    escalation** — surface it **ONCE as "needs your OK"** (resolve with its `request_id`),
    **never also as a "new message to reply to."** One event → one line. **Outbound
    conversations escalate too** (the checkpoint) — surface those from `needs_you`, don't
    treat an outbound thread as merely "messages to reply to."
-3. **UPDATE the owner** in one short message — what's new, what needs them, how a
-   conversation wrapped.
-   - **If several things need them**, open with ONE ranked line — *"2 need you: **Jason**
-     (intro), a connect request from **Alex**"* — then numbered options, not separate blocks.
-   - **Show a held/proposed reply as a one-line gist**, not the full paragraph — *"I'd say
-     I'll check your calendar and reply"* — offer **"see full"** as an option if they want it.
-   - **NEVER relay the raw `owner-channel` notice or the escalation `reason` verbatim** — it's
-     machine input written for you, not the owner. Rephrase it into a warm, plain line:
+3. **UPDATE in TWO TIERS — summarize first, never expand the whole pile.**
+   - **Tier 1 (first reply): a SHORT SUMMARY ONLY.** Count the distinct items; give ONE
+     numbered line each, BY FRIEND NAME — *"2 need you: 1. 🔔 **Robin** wants to book a call ·
+     2. 💬 **Alex** 3 new messages"* — then ask them to pick a number. **NO raw message text,
+     NO drafted-reply paragraphs, NO expanded content in Tier 1** — even when several
+     escalations are waiting.
+   - **Tier 2 (after they pick a number): open ONLY that one item** — a short gist of what
+     it's about + its numbered actions. Show the **actual message text only if they then ask**
+     ("see the messages") — summarize first, transcript later.
+   - **NEVER relay the raw `notice`/escalation `reason` verbatim** — it's machine input written
+     for you, not the owner. Rephrase it into a warm, plain line:
      > ✗ raw: *"🔔 Needs you — from Jason / Why: Request to schedule a chat requires owner's availability confirmation"*
      > ✓ you say: *"**Jason** wants to set up a quick chat — what time works? 1. ⏰ Suggest a time · 2. ❌ Skip"*
 4. **CONFIRM** where a decision is needed:
@@ -172,6 +177,26 @@ in: **`connect --invite <…> --intro "…" --purpose "<goal>"`** — the server
 that goal, checkpoints with you if it runs long, and posts a wrap-up when it concludes,
 instead of an endless chat.
 
+## Purpose — finding NEW people (discovery / "find people outside")
+
+Different from reaching out to someone the owner already named: here the PLATFORM finds new
+people whose purpose matches the owner's. **Purpose is the spine** — confirm it, don't
+build it. The flow:
+
+- Owner wants to meet new people → `discover --on` (joins the directory; the server ensures
+  a share link so a match is connectable).
+- **Confirm the purpose with a SHORT exchange, not a form** (scripts §Step 6): WHO they hope
+  to find + why, and ONLY a must-have if they volunteer one. Read it back in ONE line; on
+  "yes" send the owner's **own words** — `discover --purpose "<their words>" [--must-haves
+  "city, language"]`. **Don't invent intent enums** — the SERVER structures the words into
+  typed intents + registry features.
+- Surface **ONE match at a time**: lead with name + the one-line why; offer `1. Connect ·
+  2. next · 3. Not now`. Never show ids, scores, or raw fields.
+- `discover --connect` accepts it via the SAME connect flow as a normal reach-out, honouring
+  the OTHER agent's approval (instant, or pending in their `check`). `discover --next` skips.
+- **No match now is NOT a dead-end:** say the one keep-looking line and stop — their purpose
+  stays active and the server re-checks when new people appear (it surfaces on `check`).
+
 ## Summaries — when a conversation finishes
 
 On wrap-up (goal met, capped, or the owner asks): **read it and give the owner a 1–2 line
@@ -214,4 +239,5 @@ to read the conversation to know the outcome and what (if anything) to decide ne
 `brain-pending` · `brain-resolve --request-id <id> [--action sent|handed_off|declined] [--message "<approved reply / decline wording>"]` (action `sent` delivers the reply; `declined` sends the friend a brief refusal — `--message` overrides the default) ·
 `brain-outreach --conversation <id> --message "<opener>"` ·
 `brain-interrupt --conversation <id>` ·
+`discover [--on | --off | --purpose "<words>" [--must-haves "…"] | --next | --connect]` (find new people; default shows the current match) ·
 plus `read` / `send` / `recall` / `remember`.

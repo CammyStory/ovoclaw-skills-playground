@@ -867,16 +867,27 @@ async function cmdConnect(flags: Record<string, string | true>) {
   }, auth!.accessToken))
 
   if (res.status === 'active' || res.status === 'reauthorized' || res.status === 'already_connected') {
-    // Surface the friend's NAME so the owner can be told WHO they connected to. The
-    // connect response sometimes omits peer_name; the public manifest always has it.
-    if (!res.peer_name) {
+    // Surface the friend's NAME + DESCRIPTION so the owner can be told WHO they reached AND
+    // verify it's the RIGHT one. The connect response sometimes omits peer_name; the public
+    // manifest always carries both. The description is the ONLY public disambiguator — owner
+    // identity is deliberately hidden for privacy, so when several agents share a display
+    // name (e.g. three different "Robin"s) the name ALONE can't confirm you reached the
+    // person you meant. Without this, an owner silently connects to a same-named stranger,
+    // their messages land in that stranger's inbox, and the intended friend reports "no one
+    // found me." Surface name+description and prompt a confirm so a wrong target is caught.
+    let peerDescription: string | null = null
+    {
       const m = await api.getManifest(host, slug).catch(() => null)
-      if (m?.agent?.name) res.peer_name = m.agent.name
+      if (m?.agent?.name && !res.peer_name) res.peer_name = m.agent.name
+      peerDescription = m?.agent?.description ?? null
     }
     const handle = await persistSession(res, slug, host)
+    const who = res.peer_name
+      ? `${res.peer_name}${peerDescription ? ` (${peerDescription})` : ''}`
+      : 'them'
     ok({
-      status: res.status, conversation: handle, peer_name: res.peer_name ?? null, mode: 'registered', token_expires_at: res.token_expires_at,
-      next_step: `Connected${res.peer_name ? ` to ${res.peer_name}` : ''}. FIRST check whether this is an existing friendship: \`read --conversation ${handle}\` — if there are prior messages, summarize where things stand for the owner and respond IN CONTEXT (do NOT offer to "break the ice"); if it's brand-new, offer to introduce them. Tell the owner in their language; never show the \`conversation\` handle. If the owner has a GOAL, treat it as the conversation's PURPOSE — confirm it, re-run \`connect\` with \`--purpose "<the goal>"\`, and let the agents auto-converse toward it (the server pursues it and escalates what needs the owner); don't just translate one message. To send a specific line: \`send --conversation ${handle} --message "<text>"\`.`,
+      status: res.status, conversation: handle, peer_name: res.peer_name ?? null, peer_description: peerDescription, mode: 'registered', token_expires_at: res.token_expires_at,
+      next_step: `Connected to ${who}. CONFIRM IT'S THE RIGHT PERSON FIRST: Siobac hides owner identity for privacy, so if the owner could know more than one "${res.peer_name ?? 'person'}", the name alone can't prove it's the intended one — tell them exactly who you reached (name${peerDescription ? ' + description' : ''}); if there's ANY doubt it's the right person, suggest they ask their friend to confirm they now see the owner's agent in their connections (a same-named stranger is otherwise silent). THEN check whether this is an existing friendship: \`read --conversation ${handle}\` — prior messages → summarize where things stand and respond IN CONTEXT (do NOT "break the ice"); brand-new → offer to introduce them. Tell the owner in their language; never show the \`conversation\` handle. END with 1–3 short NUMBERED options so they can reply by number. If the owner has a GOAL, treat it as the conversation's PURPOSE — confirm it, re-run \`connect\` with \`--purpose "<the goal>"\`, and let the agents auto-converse toward it. To send a specific line: \`send --conversation ${handle} --message "<text>"\`.`,
     })
   }
   if (res.status === 'awaiting_approval') {
@@ -1049,6 +1060,25 @@ async function cmdCheck(_flags: Record<string, string | true>) {
       const bp = await api.brainPending(auth.accessToken, auth.agentId)
       result.needs_you = bp.pending
     } catch { result.needs_you = [] }
+    // C1: fold the owner-channel NARRATIVE into `check` so it is ONE scan — the owner no
+    // longer needs a separate `owner-channel` read just to see what happened. Escalations
+    // (🔔) already surface via needs_you above, so keep only the NON-escalation notices
+    // here: 🤝 new-friend connections, ✅ wrapped-up conversations, backlog notes. Recent
+    // tail only, so the digest stays short.
+    try {
+      const oc = await api.brainOwnerChannelRead(auth.accessToken, auth.agentId)
+      result.notices = (oc.messages || [])
+        .filter((m) => m.from === 'agent' && !m.text.startsWith('🔔'))
+        .slice(-8)
+    } catch { result.notices = [] }
+    // Discovery: surface a standing match the server already served (spec §5 —
+    // "when one clears the bar, surface it on the owner's next check"). The match
+    // is computed by the rematch-on-new-agent job, NOT here — this is a cheap read
+    // (it also self-heals a stale suggestion). Optional: never sink the check.
+    try {
+      const dsc = await api.getSuggestion(auth.accessToken, auth.agentId)
+      if (dsc.suggestion) result.discovery = { suggestion: dsc.suggestion }
+    } catch { /* discovery is optional */ }
   } else {
     result.inbound = { note: 'not logged in — log in to see your conversations (Siobac is login-only)' }
   }
@@ -1064,7 +1094,7 @@ async function cmdCheck(_flags: Record<string, string | true>) {
   }
   result.outbound = outbound
   result.next_step = loggedIn
-    ? "One scan of EVERYTHING needing the owner — `check` is now self-complete, you do NOT need a separate `brain-pending`. Order: (1) `needs_you` = escalations the server HELD for the owner's approval, on BOTH inbound AND OUTBOUND/connect conversations — including agent↔agent \"keep going or wrap up?\" checkpoints and any reach-out that needs a decision. Surface EACH once as \"needs your OK\" by friend (`friend`/`reason`), and resolve with `brain-resolve --request-id <request_id>` (sent/handed_off/declined). (2) `inbound.threads` with `held:true` is the SAME kind of escalation — if its `connId` matches a `needs_you` item, it's one event, surface ONCE (never also as a new message). (3) `held:false` + `unread_count`>0 = new messages to look at (`read --conversation <connection_id>`). (4) `inbound.pending_requests` = people asking to connect (approve/reject). (5) `outbound[].new_messages` = replies on conversations the owner started. Give ONE short digest in the owner's language (by friend name, never raw ids/handles); only if `needs_you` AND unread AND pending_requests are ALL empty is the queue clear."
+    ? "`check` is the SINGLE complete scan — new messages + escalations + the brain's notices, all folded in (no separate `brain-pending` or `owner-channel` read needed). PRESENT IN TWO TIERS — never expand the whole pile at once.\n\nTIER 1 (THIS turn) — SUMMARY ONLY. Count the distinct items and give ONE numbered line each, BY FRIEND NAME, in the owner's language. NO raw message text, NO drafted replies, NO expanded content yet — just what each item is, in a few words. e.g. \"2 things need you — 1. 🔔 Robin: wants to book a call · 2. 💬 Alex: 3 new messages\". Then ask the owner to pick a number. If it's all quiet, say so in one line (you may still mention notices like \"✅ wrapped up with Sam\").\n\nTIER 2 (NEXT turn, after they pick a number) — open ONLY that one item: a SHORT summary of what it's about + its numbered actions. Show the actual message TEXT only if the owner then asks to see it (summarize first, transcript later).\n\nBUILD the Tier-1 list in this ORDER, ONE line per DISTINCT item, DEDUPED by `connId` (an item in `needs_you` AND `inbound` is ONE line — surface as \"needs your OK\", never also as a new message): (1) `needs_you` = escalations the server HELD — resolve via `brain-resolve --request-id <id>` (sent/handed_off/declined); (2) `inbound.pending_requests` = people asking to connect (approve/reject); (3) `inbound.threads` held:false + unread_count>0 = new messages (`read --conversation <connection_id>`); (4) `notices` = the brain's narrative (🤝 new friend, ✅ wrapped up) — fold in as one-liners, don't expand; (5) `outbound[].new_messages` = replies on conversations the owner started; (6) `discovery.suggestion` = a NEW person the platform FOUND for the owner (discovery) — surface as ONE upbeat line by NAME, e.g. \"🎯 I found someone you might click with — <candidate_name>. Want to see?\"; on the owner's yes, run `discover` to present them (then Connect · next · Not now). Never show the score or ids. Never show raw ids/handles. Only if `needs_you` AND unread AND pending_requests are ALL empty is the queue clear (a `discovery` match or notices may still be worth a mention)."
     // LOGGED OUT: do NOT say "queue is clear" — inbound is invisible. Lead with the
     // login gap so a less-capable platform surfaces it instead of a false all-clear.
     : "NOT LOGGED IN — you can only see the owner's OUTBOUND conversations here (in `outbound`); their INBOUND (people who connected to them, requests, escalations) is INVISIBLE until they log in. Do NOT tell the owner their queue is clear. Tell them (in their language) you need a quick login to see incoming, then run `login` → `login --finish`. Still summarize anything in `outbound` if present."
@@ -1099,6 +1129,107 @@ async function cmdForgetSession(flags: Record<string, string | true>) {
   ok({ status: 'ok', forgot: handle })
 }
 
+
+// ── Discovery / matchmaking ("find people outside") ───────────────────
+// One command, several actions via flags. The SERVER runs the whole match
+// pipeline (structure purpose → gate → score → re-rank → serve ONE). The skill
+// only: toggles directory membership, confirms the purpose (a SCRIPT, not a
+// form), shows the SINGLE best match, and connects (reusing the connect flow,
+// honouring the candidate's requires_approval). Spec: docs/discovery-match-core.md.
+
+const KEEP_LOOKING =
+  "No strong match right now. Tell the owner ONE line (in their language): \"No strong match right now — I'll keep looking and check with you next time.\" Do NOT dead-end or list weak options; their purpose stays active and the server re-checks when new people appear."
+
+function matchNextStep(s: api.MatchSuggestion): string {
+  return (
+    `Present THIS ONE match to the owner (in their language), using the present-match SCRIPT ` +
+    `(references/scripts-en.md / scripts-cn.md). Lead with the candidate NAME ("${s.candidate_name}") and the ` +
+    `one-line WHY ("${s.why_text}"); you may mention the shared/complementary points. NEVER show ids, scores, or raw fields. ` +
+    `Then offer exactly: 1. Connect (\`discover --connect\`) · 2. next (\`discover --next\`) · 3. Not now (stop here). One match at a time.`
+  )
+}
+
+function parseMustHaves(raw: string | undefined): string[] {
+  if (!raw) return []
+  return raw.split(/[,;]/).map((s) => s.trim()).filter(Boolean).slice(0, 10)
+}
+
+async function cmdDiscover(flags: Record<string, string | true>) {
+  const boolFlag = (v: string | true | undefined) => v === true || v === 'true' || v === ''
+  const { auth, agentId } = await requireBoundAgent()
+  const bearer = auth.accessToken
+
+  // --off: leave the directory (purpose is kept).
+  if (boolFlag(flags.off)) {
+    await api.discoverOff(bearer, agentId)
+    return ok({
+      status: 'ok', discoverable: false,
+      next_step: "Discovery is OFF — tell the owner (in their language) you've stopped looking for new people. Their purpose is kept; `discover --on` resumes.",
+    })
+  }
+
+  // --on: join the directory (server ensures a share link so a match is connectable).
+  if (boolFlag(flags.on)) {
+    const r = await api.discoverOn(bearer, agentId)
+    return ok({
+      status: 'ok', discoverable: true, has_purpose: r.has_purpose,
+      next_step: r.has_purpose
+        ? 'Discovery is ON and a purpose already exists — run `discover` to see the current match.'
+        : "Discovery is ON. Now CONFIRM the purpose with the owner using the discover purpose-confirm SCRIPT (references/scripts-en.md / scripts-cn.md): ask WHO they hope to find + why, and ONLY any must-have they volunteer (same city, language). Read it back in ONE line; on \"yes\" call `discover --purpose \"<owner's own words>\" [--must-haves \"city, language\"]`.",
+    })
+  }
+
+  // --purpose: save the confirmed purpose; server structures it + serves the first match.
+  const purpose = optionalString(flags, 'purpose')
+  if (purpose !== undefined) {
+    const mustHaves = parseMustHaves(optionalString(flags, 'must-haves'))
+    const r = await api.setPurpose(bearer, agentId, purpose, mustHaves)
+    return ok({
+      status: 'ok', purpose_saved: true, intents: r.intents, suggestion: r.suggestion,
+      next_step: r.suggestion ? matchNextStep(r.suggestion) : KEEP_LOOKING,
+    })
+  }
+
+  // --next: skip the current match (cooldown) and serve the next above-bar one.
+  if (boolFlag(flags.next)) {
+    const r = await api.nextSuggestion(bearer, agentId)
+    return ok({
+      status: 'ok', suggestion: r.suggestion,
+      next_step: r.suggestion ? matchNextStep(r.suggestion) : KEEP_LOOKING,
+    })
+  }
+
+  // --connect: accept the current match → existing connect flow, honouring approval.
+  if (boolFlag(flags.connect)) {
+    const r = await api.acceptSuggestion(bearer, agentId)
+    if (!r.ok) {
+      return ok({
+        status: 'ok', connected: false, error: r.error, reason: r.reason,
+        next_step: r.error === 'no_active_suggestion'
+          ? "There's no match on the table to connect. Run `discover` to see if one is ready."
+          : `Couldn't connect (${r.error}${r.reason ? ': ' + r.reason : ''}). Tell the owner (in their language); they can try \`discover --next\` for another.`,
+      })
+    }
+    return ok({
+      status: 'ok', connected: true, connect_status: r.connect_status, candidate_name: r.candidate_name,
+      next_step: r.connect_status === 'active'
+        ? `Connected to ${r.candidate_name}! Tell the owner (in their language) they're now linked — talk via \`conversations\` / \`send\`.`
+        : `Sent a connect request to ${r.candidate_name} — it needs THEIR owner's approval. Tell the owner (in their language) you'll flag it when accepted (it shows up in \`check\`).`,
+    })
+  }
+
+  // Default (no action flag): show the current suggestion / looking state.
+  const r = await api.getSuggestion(bearer, agentId)
+  if (r.suggestion) {
+    return ok({ status: 'ok', suggestion: r.suggestion, next_step: matchNextStep(r.suggestion) })
+  }
+  return ok({
+    status: 'ok', suggestion: null, looking: r.looking,
+    next_step: r.looking
+      ? KEEP_LOOKING
+      : "Not in the directory yet. To start finding new people: `discover --on`, then confirm the owner's purpose with the SCRIPT.",
+  })
+}
 
 
 // ── Dispatch ──────────────────────────────────────────────────────────
@@ -1173,6 +1304,8 @@ async function main() {
     case 'set-profile':       return cmdSetProfile(flags)
     case 'get-directive':     return cmdGetDirective(flags)
     case 'set-directive':     return cmdSetDirective(flags)
+    // Discovery / matchmaking ("find people outside")
+    case 'discover':          return cmdDiscover(flags)
     // Agent Brain (platform-scheduled autonomous loop)
     // Server-brain model: the SERVER auto-replies + escalates. The skill only
     // toggles autonomous mode and lets the owner handle escalations.

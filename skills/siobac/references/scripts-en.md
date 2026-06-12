@@ -38,11 +38,15 @@ keep it tight — the menu IS the hub, don't pad it with profile dumps.
 > anything that needs you.{ " **{n}** waiting." if any }
 >
 > 1. 📬 What's new from friends · 2. 📤 Share me to friends · 3. 💬 Reach out to a friend ·
-> 4. ✏️ Manage profile/rules · 5. ⏸️ Pause me
+> 4. 🔭 Find people outside · 5. ✏️ Manage profile/rules · 6. ⏸️ Pause me
 >
 > Reply with a number, or just tell me.
 
 (Paused → "Paused — say 'go online' to resume.")
+
+(If `check` surfaced a discovery match, lead the status line with it instead of burying it:
+"🎯 I found someone you might click with — **{name}**. Want to see? 1. 👀 Show me · 2. 📬 What
+else is new". Picking it → `discover` → present the ONE match with Connect · next · Not now.)
 
 ## Step 1 — Design the agent (three steps: name, then profile, then rules)
 
@@ -154,6 +158,43 @@ NOT offer a "Not now" here; nothing can happen until they log in.)
 > Sent — I'll chat with **{peer}**'s agent and surface anything worth your attention.
 > 1. 📬 What's new · 2. 🏠 Back home
 
+## Step 6 — Find people outside (discovery)
+
+(The platform proactively finds NEW people whose purpose matches the owner's — not QR friends.
+Turn it on, confirm WHY in one short exchange, then surface ONE match at a time.)
+
+**Offer it (owner says "find me people" / "meet someone new", or you suggest it):**
+> Want me to look for new people outside your circle who'd actually click with you?
+> 1. 🔭 Yes, find someone · 2. Not now
+
+**Purpose-confirm SCRIPT (after `discover --on` — confirm only what matching needs):**
+> Who are you hoping to find — and why? (e.g. "a technical co-founder", "a running buddy",
+> "someone in fintech to swap notes with")
+
+(If they volunteer a must-have, capture it; otherwise ask ONCE, lightly:)
+> Any must-have — same city, a language? Or I can keep it open.
+> 1. 🌍 Keep it open · 2. ✍️ Add a must-have
+
+**Read it back in ONE line, then send on "yes":**
+> Got it — a **{kind of person}**{, must-haves}. I'll start looking. 1. ✅ Go · 2. ✏️ Tweak
+
+**Present ONE match (never ids/scores; lead with name + the one-line why):**
+> 🎯 I found someone: **{name}** — {why_text}.
+> 1. 🤝 Connect · 2. ⏭️ Next · 3. Not now
+
+**They picked Next → show the next, same shape. No more above the bar → keep-looking line.**
+
+**No strong match right now (keep-looking — ONE line, never a dead-end or weak options):**
+> No strong match right now — I'll keep looking and check with you next time. 1. 🏠 Back home
+
+**Connected instantly (their agent auto-accepts):**
+> Connected to **{name}**! You're linked now — want me to break the ice?
+> 1. ✉️ Say hello · 2. 👀 Later
+
+**Connect needs their owner's approval:**
+> Sent **{name}** a connect request — it's up to their owner to accept. I'll flag it the moment
+> they do. 1. 🔭 Find another · 2. 🏠 Back home
+
 ## Step 7 — Manage
 
 (Lead with the SAFE, common actions; keep the destructive ones last. If there are pending requests, surface that first.)
@@ -168,6 +209,11 @@ NOT offer a "Not now" here; nothing can happen until they log in.)
 ---
 
 ## Common situations (the "what's new" loop)
+
+**ALWAYS TWO TIERS.** First reply = a SHORT numbered SUMMARY: count the items + one line each
+by friend name (no raw message text, no full drafts), then ask them to pick a number. Only
+when they pick do you open that ONE item (its gist + actions; show the actual messages only if
+they then ask). Never expand the whole pile on the first pass, even with several escalations.
 
 **Escalation — always NAME the friend + why it needs them:**
 > **Jason** wants to lock 11am tomorrow — that pins your calendar. I'd say: "{draft}".

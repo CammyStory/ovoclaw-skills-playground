@@ -1074,7 +1074,7 @@ async function cmdDiscover(flags) {
             status: 'ok', discoverable: true, has_purpose: r.has_purpose,
             next_step: r.has_purpose
                 ? 'Discovery is ON and a purpose already exists — run `discover` to see the current match.'
-                : "Discovery is ON. Now CONFIRM the purpose with the owner using the discover purpose-confirm SCRIPT (references/scripts-en.md / scripts-cn.md): ask WHO they hope to find + why, and ONLY any must-have they volunteer (same city, language). Read it back in ONE line; on \"yes\" call `discover --purpose \"<owner's own words>\" [--must-haves \"city, language\"]`.",
+                : "Discovery is ON. Now CONFIRM the purpose with the owner using the discover purpose-confirm SCRIPT (references/scripts-en.md / scripts-cn.md). Don't ask an open question — OFFER 3 numbered options: 1-2 are concrete example purposes YOU generate FROM THIS AGENT'S OWN PROFILE (get-profile / the description you already have — e.g. for a co-founder profile: \"a technical co-founder\" / \"someone in your space to swap notes with\"), and 3 = \"Something else (tell me)\". On their pick or their own words, read it back in ONE line; on \"yes\" call `discover --purpose \"<owner's own words>\" [--must-haves \"city, language\"]`. Add a must-have only if they volunteer one.",
         });
     }
     // --purpose: save the confirmed purpose; server structures it + serves the first match.
@@ -1106,10 +1106,30 @@ async function cmdDiscover(flags) {
                     : `Couldn't connect (${r.error}${r.reason ? ': ' + r.reason : ''}). Tell the owner (in their language); they can try \`discover --next\` for another.`,
             });
         }
+        // Instant connect → PERSIST a local session from the returned token bundle
+        // (same as `connect`), so the owner can message the new friend right away.
+        let handle;
+        if (r.connect_status === 'active' && r.session && r.slug) {
+            try {
+                handle = await persistSession({
+                    status: 'active',
+                    token: r.session.token,
+                    token_expires_at: r.session.token_expires_at,
+                    client_secret: r.session.client_secret,
+                    your_user_id: r.session.your_user_id,
+                    conversation_id: r.session.conversation_id,
+                    peer_name: r.session.peer_name ?? r.candidate_name,
+                }, r.slug, api.getApiBase());
+            }
+            catch { /* session save best-effort — connection still exists server-side */ }
+        }
         return ok({
             status: 'ok', connected: true, connect_status: r.connect_status, candidate_name: r.candidate_name,
+            conversation: handle,
             next_step: r.connect_status === 'active'
-                ? `Connected to ${r.candidate_name}! Tell the owner (in their language) they're now linked — talk via \`conversations\` / \`send\`.`
+                ? (handle
+                    ? `Connected to ${r.candidate_name}! They're now a saved friend. If it's a NEW connection, offer to break the ice; to send a line: \`send --conversation ${handle} --message "<text>"\`. Tell the owner (in their language); never show the handle.`
+                    : `Connected to ${r.candidate_name}! Tell the owner (in their language) they're now linked — talk via \`conversations\` / \`send\`.`)
                 : `Sent a connect request to ${r.candidate_name} — it needs THEIR owner's approval. Tell the owner (in their language) you'll flag it when accepted (it shows up in \`check\`).`,
         });
     }

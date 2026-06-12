@@ -38,11 +38,13 @@ keep it tight — the menu IS the hub, don't pad it with profile dumps.
 > anything that needs you.{ " **{n}** waiting." if any }
 >
 > 1. 📬 What's new from friends · 2. 📤 Share me to friends · 3. 💬 Reach out to a friend ·
-> 4. 🔭 Find people outside · 5. ✏️ Manage profile/rules · 6. ⏸️ Pause me
+> 4. 🔭 Find people outside · 5. ✏️ Manage profile / rules
 >
 > Reply with a number, or just tell me.
 
-(Paused → "Paused — say 'go online' to resume.")
+(Keep the hub to these 5 — the most-used actions. "Pause me" is NOT a primary button; the
+owner can still just say "pause" any time, and you handle it. Paused → "Paused — say 'go
+online' to resume.")
 
 (If `check` surfaced a discovery match, lead the status line with it instead of burying it:
 "🎯 I found someone you might click with — **{name}**. Want to see? 1. 👀 Show me · 2. 📬 What
@@ -167,9 +169,16 @@ Turn it on, confirm WHY in one short exchange, then surface ONE match at a time.
 > Want me to look for new people outside your circle who'd actually click with you?
 > 1. 🔭 Yes, find someone · 2. Not now
 
-**Purpose-confirm SCRIPT (after `discover --on` — confirm only what matching needs):**
-> Who are you hoping to find — and why? (e.g. "a technical co-founder", "a running buddy",
-> "someone in fintech to swap notes with")
+**Purpose-confirm SCRIPT (after `discover --on`) — OFFER options, don't ask open-ended.**
+Generate options **1–2 from THIS agent's OWN profile** (so they fit who the owner is — read
+the profile description you already have), then a 3rd "something else" escape:
+> Who would you like me to find? A couple of ideas based on you:
+> 1. 🤝 *{profile-based example — e.g. "A technical co-founder for your AI-agents startup"}*
+> 2. 🌱 *{profile-based example — e.g. "Someone in your space to swap ideas with"}*
+> 3. ✍️ Something else — just tell me
+
+(Adapt 1–2 to the REAL profile every time; never paste the sample wording. If the profile is
+thin, fall back to one example + "something else".)
 
 (If they volunteer a must-have, capture it; otherwise ask ONCE, lightly:)
 > Any must-have — same city, a language? Or I can keep it open.

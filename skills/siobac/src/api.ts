@@ -712,9 +712,17 @@ export async function getSuggestion(bearer: string, agentId: string): Promise<{ 
 export async function nextSuggestion(bearer: string, agentId: string): Promise<{ suggestion: MatchSuggestion | null }> {
   return jsonFetch({ method: 'POST', path: `/agents/${encodeURIComponent(agentId)}/discover/next`, bearer })
 }
+export interface DiscoverySession {
+  token: string; token_expires_at: string; client_secret: string
+  your_user_id: string; conversation_id?: string; peer_name?: string
+}
 export async function acceptSuggestion(
   bearer: string, agentId: string,
-): Promise<{ ok: boolean; connect_status?: 'active' | 'awaiting_approval'; candidate_name?: string; conversation_id?: string; error?: string; reason?: string }> {
+): Promise<{
+  ok: boolean; connect_status?: 'active' | 'awaiting_approval'; candidate_name?: string
+  slug?: string; request_id?: string; conversation_id?: string
+  session?: DiscoverySession; error?: string; reason?: string
+}> {
   return jsonFetch({ method: 'POST', path: `/agents/${encodeURIComponent(agentId)}/discover/accept`, bearer })
 }
 

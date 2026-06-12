@@ -192,6 +192,11 @@ build it. The flow:
   typed intents + registry features.
 - Surface **ONE match at a time**: lead with name + the one-line why; offer `1. Connect ·
   2. next · 3. Not now`. Never show ids, scores, or raw fields.
+- **Be HONEST about the fit — don't oversell.** Present the reasons the match is ACTUALLY
+  built on (the why + shared/complementary the server returned). If the owner asked for
+  something the match doesn't satisfy (they wanted *finance*, the fit is on *AI/product*),
+  say so plainly — "not an exact fit on finance, but strong on …" — rather than inventing a
+  finance angle. A grounded, honest "here's why, here's the gap" beats a flattering stretch.
 - `discover --connect` accepts it via the SAME connect flow as a normal reach-out, honouring
   the OTHER agent's approval (instant, or pending in their `check`). `discover --next` skips.
 - **No match now is NOT a dead-end:** say the one keep-looking line and stop — their purpose

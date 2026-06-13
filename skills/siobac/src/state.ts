@@ -75,6 +75,12 @@ function stateDirFor(key: string): string {
 // State dir for the current run (env key > local binding file > shared default).
 export function stateDir(): string { return stateDirFor(resolveAgentKey()) }
 
+// The agent-state key resolved for THIS run. `login` records it in the pending
+// handshake; `login --finish` pins it back so the token lands in the same
+// per-agent folder even when finish runs from a different working directory.
+export function resolvedAgentKey(): string { return resolveAgentKey() }
+export function pinAgentKey(key: string): void { _pinnedKey = sanitizeKey(key) }
+
 export type BindingSource = 'env' | 'local-file' | 'default-shared'
 export interface AgentBinding {
   key: string
@@ -295,7 +301,19 @@ export async function saveBoundAgent(agent: BoundAgentState): Promise<void> {
 // the user says they approved — reads this back and polls once for the token.
 // Kept in the SAME per-agent state dir so the finished token lands in the right
 // folder. This is what stops the agent from silently looping `login`.
-function pendingLoginFile(): string { return join(dir(), 'login-pending.json') }
+// A stable env-provided key isolates state AND is cwd-independent, so the pending
+// handshake can live in the per-agent dir. WITHOUT one, the keyed dir comes from a
+// cwd-relative .siobac.json that `login` and `login --finish` (separate processes)
+// can resolve DIFFERENTLY if the host shifts cwd between calls — the pending would
+// vanish and the agent would loop `login`. In that case park the transient
+// handshake at the STABLE shared base where finish always finds it, and record the
+// resolved agentKey inside so finish still writes auth.json to the right folder.
+function hasStableEnvKey(): boolean {
+  return !!(process.env.SIOBAC_AGENT_KEY ?? process.env.OVOCLAW_AGENT_KEY ?? '').trim()
+}
+function pendingLoginFile(): string {
+  return hasStableEnvKey() ? join(dir(), 'login-pending.json') : join(STATE_BASE, 'login-pending.json')
+}
 
 export interface PendingLogin {
   deviceCode: string
@@ -303,11 +321,20 @@ export interface PendingLogin {
   expiresAt: string  // ISO 8601 — after this the device code is dead
   agentHint?: string
   startedAt: string  // ISO 8601
+  // The agent-state key resolved when `login` ran. `login --finish` pins this so
+  // the token lands in the SAME per-agent folder even from a different cwd.
+  agentKey?: string
+  // Verification info, so re-running `login` while approval is still live can
+  // RE-SHOW the same link instead of minting a new device code (which invalidates
+  // the link the user is busy approving — the "new link every time" loop).
+  verificationUriComplete?: string
+  verificationUri?: string
+  userCode?: string
 }
 
 export async function savePendingLogin(p: PendingLogin): Promise<void> {
-  await ensureDir()
   const f = pendingLoginFile()
+  await fs.mkdir(dirname(f), { recursive: true, mode: 0o700 })
   await fs.writeFile(f, JSON.stringify(p, null, 2), { mode: 0o600 })
   try { await fs.chmod(f, 0o600) } catch {}
 }

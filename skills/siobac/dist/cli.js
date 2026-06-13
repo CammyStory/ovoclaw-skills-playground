@@ -2,7 +2,7 @@
 import { constants as fsConstants } from 'node:fs';
 import { parseArgs, requireString, optionalString, optionalNonNegInt, CliError, } from './argparse.js';
 import * as api from './api.js';
-import { authFilePath, ensureAgentBinding, loadAuth, saveAuth, clearAuth, loadBoundAgent, saveBoundAgent, markNameConfirmed, savePendingLogin, loadPendingLogin, clearPendingLogin, saveSession, getSession, listSessions, deleteSession, updateSession, newSessionHandle, migrateLegacyState, } from './state.js';
+import { authFilePath, ensureAgentBinding, loadAuth, saveAuth, clearAuth, loadBoundAgent, saveBoundAgent, markNameConfirmed, savePendingLogin, loadPendingLogin, clearPendingLogin, resolvedAgentKey, pinAgentKey, saveSession, getSession, listSessions, deleteSession, updateSession, newSessionHandle, migrateLegacyState, } from './state.js';
 import { parseInvite } from './invite.js';
 import { cmdDoctor, cmdVerify, cmdSetup } from './diagnostics.js';
 import { cmdGuide, cmdHelp } from './guide.js';
@@ -22,6 +22,22 @@ function wantsFinish(flags) {
 async function cmdLogin(flags) {
     if (wantsFinish(flags))
         return cmdLoginFinish(flags);
+    // Idempotent while an approval is still live: if a non-expired pending login
+    // already exists, RE-SHOW its link instead of minting a new device code. A new
+    // code would invalidate the link the user is busy approving — the "new link every
+    // time" loop. The user just approves THIS link, then runs `login --finish`.
+    const live = await loadPendingLogin();
+    if (live && live.verificationUriComplete && Date.now() < new Date(live.expiresAt).getTime()) {
+        ok({
+            status: 'awaiting_user_approval',
+            reused: true,
+            verification_uri_complete: live.verificationUriComplete,
+            verification_uri: live.verificationUri,
+            user_code: live.userCode,
+            message: 'A login is ALREADY in progress — do not start a new one. Show the user THIS same link and have them approve it (sign in / sign up, pick the agent, approve).',
+            next_step: 'After the user confirms they approved, run `login --finish` once. Do NOT re-run `login` — it will not change anything while this link is live.',
+        });
+    }
     // ── Step 1: initiate. Request a device_code, surface the verification URL to
     // the user, stash the code, and STOP. The server-side /oauth/* endpoints
     // landed in phase 2; if a deployment predates them this degrades cleanly to
@@ -56,6 +72,12 @@ async function cmdLogin(flags) {
         expiresAt: new Date(Date.now() + codeResp.expires_in * 1000).toISOString(),
         agentHint,
         startedAt: new Date().toISOString(),
+        // Record the resolved state key so `login --finish` saves the token to the
+        // SAME per-agent folder even if it runs from a different working directory.
+        agentKey: resolvedAgentKey(),
+        verificationUriComplete: codeResp.verification_uri_complete,
+        verificationUri: codeResp.verification_uri,
+        userCode: codeResp.user_code,
     });
     // Show the user the verification link. Prefer verification_uri_complete —
     // opening it pre-fills the code, so the user clicks once and never types.
@@ -76,8 +98,15 @@ async function cmdLogin(flags) {
 async function cmdLoginFinish(_flags) {
     const pending = await loadPendingLogin();
     if (!pending) {
-        throw new CliError('no login in progress. Run `login` first to get the approval link, then `login --finish` after the user approves.');
+        throw new CliError('No pending login found. If you have NOT started a login yet, run `login` once and have the user approve the link. ' +
+            'If you JUST ran `login` and the user approved, the login state did not persist between commands on this host — ' +
+            'set a stable SIOBAC_AGENT_KEY (e.g. SIOBAC_AGENT_KEY=my-agent), then run `login` and `login --finish` again. ' +
+            'Do NOT loop `login` on your own — that mints a fresh link each time and never completes.');
     }
+    // Pin the key recorded at login time so the token saves to the SAME per-agent
+    // folder even when `login --finish` runs from a different working directory.
+    if (typeof pending.agentKey === 'string')
+        pinAgentKey(pending.agentKey);
     if (Date.now() >= new Date(pending.expiresAt).getTime()) {
         await clearPendingLogin();
         throw api.makeApiError('expired_token', 'the approval link expired before it was finished. Run `login` again to get a fresh link.');

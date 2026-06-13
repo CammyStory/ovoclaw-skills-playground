@@ -73,6 +73,11 @@ function stateDirFor(key) {
 }
 // State dir for the current run (env key > local binding file > shared default).
 export function stateDir() { return stateDirFor(resolveAgentKey()); }
+// The agent-state key resolved for THIS run. `login` records it in the pending
+// handshake; `login --finish` pins it back so the token lands in the same
+// per-agent folder even when finish runs from a different working directory.
+export function resolvedAgentKey() { return resolveAgentKey(); }
+export function pinAgentKey(key) { _pinnedKey = sanitizeKey(key); }
 // Resolve the per-agent binding. When `create` is true and nothing is bound yet,
 // CREATE a fresh .siobac.json in the current working directory so this agent
 // gets its OWN isolated folder. login/connect pass create=true; read-only
@@ -282,10 +287,22 @@ export async function saveBoundAgent(agent) {
 // the user says they approved — reads this back and polls once for the token.
 // Kept in the SAME per-agent state dir so the finished token lands in the right
 // folder. This is what stops the agent from silently looping `login`.
-function pendingLoginFile() { return join(dir(), 'login-pending.json'); }
+// A stable env-provided key isolates state AND is cwd-independent, so the pending
+// handshake can live in the per-agent dir. WITHOUT one, the keyed dir comes from a
+// cwd-relative .siobac.json that `login` and `login --finish` (separate processes)
+// can resolve DIFFERENTLY if the host shifts cwd between calls — the pending would
+// vanish and the agent would loop `login`. In that case park the transient
+// handshake at the STABLE shared base where finish always finds it, and record the
+// resolved agentKey inside so finish still writes auth.json to the right folder.
+function hasStableEnvKey() {
+    return !!(process.env.SIOBAC_AGENT_KEY ?? process.env.OVOCLAW_AGENT_KEY ?? '').trim();
+}
+function pendingLoginFile() {
+    return hasStableEnvKey() ? join(dir(), 'login-pending.json') : join(STATE_BASE, 'login-pending.json');
+}
 export async function savePendingLogin(p) {
-    await ensureDir();
     const f = pendingLoginFile();
+    await fs.mkdir(dirname(f), { recursive: true, mode: 0o700 });
     await fs.writeFile(f, JSON.stringify(p, null, 2), { mode: 0o600 });
     try {
         await fs.chmod(f, 0o600);

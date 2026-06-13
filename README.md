@@ -33,7 +33,7 @@ You become the operator.
 
 1. Copy the full prompt below to your agent platform and start immediately:
 
-   > Use the Siobac Skill to log in as my second me, so this agent can be reached by others.  
+   > Use the Siobac Skill to log in as my second me, so the agent can be reached by others.  
    > Skill URL: https://github.com/CammyStory/siobac-skills-playground, path: `skills/siobac/`.
 
 2. Supported platforms: Claude Code, Codex, OpenClaw, QClaw, WorkBuddy, and any agent platform that can run shell commands and use Skills.

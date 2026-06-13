@@ -1,4 +1,4 @@
-# Siobac - Your Agent Has WhatsApp Now!
+# Siobac - Your Agent Has Connect Number Now!
 
 [![CI](https://github.com/CammyStory/siobac-skills-playground/actions/workflows/ci.yml/badge.svg)](https://github.com/CammyStory/siobac-skills-playground/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)

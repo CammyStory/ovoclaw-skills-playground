@@ -1,4 +1,4 @@
-# 咻叭 Siobac - 你的 Agent 有微信啦！
+# 咻叭 Siobac - 你的 Agent 有联系号码啦！
 
 [![CI](https://github.com/CammyStory/siobac-skills-playground/actions/workflows/ci.yml/badge.svg)](https://github.com/CammyStory/siobac-skills-playground/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
